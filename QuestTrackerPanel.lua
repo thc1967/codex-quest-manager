@@ -1,3 +1,5 @@
+local mod = dmhub.GetModLoading()
+
 --- Quest Tracker Panel - Main dockable panel for quest management
 --- Provides the primary interface for viewing and managing quests in the Codex VTT
 --- @class QTQuestTrackerPanel
@@ -26,6 +28,7 @@ function QTQuestTrackerPanel:Register()
     local questTrackerPanel = self
     DockablePanel.Register {
         name = "Quest Tracker",
+        icon = mod.images.actionLog,
         content = function()
             local panel = questTrackerPanel:_buildMainPanel()
             questTrackerPanel.panelElement = panel
@@ -158,6 +161,9 @@ function QTQuestTrackerPanel:_buildQuestItem(quest)
         height = 50,
         flow = "horizontal",
         classes = {"quest-item", "quest-" .. status, "priority-" .. priority},
+        click = function()
+            self:_showEditQuestDialog(quest.id)
+        end,
         children = {
             -- Status indicator
             gui.Panel {
@@ -357,13 +363,27 @@ function QTQuestTrackerPanel:_getMainStyles()
     }
 end
 
---- Shows the new quest creation dialog
+--- Shows the quest dialog for creating new quests
 function QTQuestTrackerPanel:_showNewQuestDialog()
-    local dialog = QTNewQuestDialog:new(self.questManager)
+    local dialog = QTQuestDialog:new(self.questManager)
     if dialog then
         dialog:Show(
             function(quest)
                 -- Refresh the panel display after quest creation
+                self:_refreshDisplay()
+            end
+        )
+    end
+end
+
+--- Shows the quest dialog for editing existing quests
+--- @param questId string The ID of the quest to edit
+function QTQuestTrackerPanel:_showEditQuestDialog(questId)
+    local dialog = QTQuestDialog:new(self.questManager, questId)
+    if dialog then
+        dialog:Show(
+            function(quest)
+                -- Refresh the panel display after quest update
                 self:_refreshDisplay()
             end
         )
