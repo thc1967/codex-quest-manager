@@ -28,7 +28,9 @@ function QTQuestTrackerPanel:Register()
     local questTrackerPanel = self
     DockablePanel.Register {
         name = "Quest Tracker",
-        icon = mod.images.actionLog,
+        icon = mod.images.questManager,
+        minHeight = 18,
+        maxHeight = 18,
         content = function()
             local panel = questTrackerPanel:_buildMainPanel()
             questTrackerPanel.panelElement = panel
