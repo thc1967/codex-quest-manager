@@ -73,12 +73,12 @@ function QTQuestTrackerPanel:_buildHeaderPanel()
             gui.Label {
                 text = "Quest Tracker",
                 classes = {"header-title"},
-                width = "70%"
+                width = "75%"
             },
             gui.Button {
                 text = "+ New",
                 classes = {"header-button"},
-                width = "30%",
+                width = "25%",
                 click = function(element)
                     self:_showNewQuestDialog()
                 end
@@ -367,28 +367,30 @@ end
 
 --- Shows the quest dialog for creating new quests
 function QTQuestTrackerPanel:_showNewQuestDialog()
-    local dialog = QTQuestDialog:new(self.questManager)
-    if dialog then
-        dialog:Show(
-            function(quest)
-                -- Refresh the panel display after quest creation
-                self:_refreshDisplay()
-            end
-        )
+    local draftQuest = self.questManager:CreateDraftQuest("New Quest", dmhub.playerId)
+    local questManagerWindow = QTQuestManagerWindow:new(self.questManager, draftQuest)
+    if questManagerWindow then
+        questManagerWindow:Show()
     end
 end
 
 --- Shows the quest dialog for editing existing quests
 --- @param questId string The ID of the quest to edit
 function QTQuestTrackerPanel:_showEditQuestDialog(questId)
-    local dialog = QTQuestDialog:new(self.questManager, questId)
-    if dialog then
-        dialog:Show(
-            function(quest)
-                -- Refresh the panel display after quest update
-                self:_refreshDisplay()
-            end
-        )
+    local quest = self.questManager:GetQuest(questId)
+    if quest then
+        local questManagerWindow = QTQuestManagerWindow:new(self.questManager, quest)
+        if questManagerWindow then
+            questManagerWindow:Show()
+        end
+    end
+end
+
+--- Shows the Quest Manager window
+function QTQuestTrackerPanel:_showQuestManagerWindow()
+    local questManagerWindow = QTQuestManagerWindow:new(self.questManager)
+    if questManagerWindow then
+        questManagerWindow:Show()
     end
 end
 

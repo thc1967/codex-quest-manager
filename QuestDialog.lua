@@ -252,6 +252,8 @@ function QTQuestDialog:Show(onQuestCreated)
         classes = {"dialog-panel"},
         flow = "vertical",
         styles = self:_getDialogStyles(),
+        bgcolor = "#111111ff", -- Ensure opaque background
+        opacity = 1.0,
         children = {
             -- Header
             gui.Panel{
@@ -532,9 +534,10 @@ function QTQuestDialog:_getDialogStyles()
     return {
         gui.Style{
             selectors = {"dialog-panel"},
-            bgcolor = Styles.backgroundColor,
+            bgcolor = "#111111ff", -- Completely opaque background
             borderWidth = 2,
-            borderColor = Styles.textColor
+            borderColor = Styles.textColor,
+            opacity = 1.0
         },
         gui.Style{
             selectors = {"dialog-header"},

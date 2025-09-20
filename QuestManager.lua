@@ -74,6 +74,60 @@ function QTQuestManager:CreateQuest(title, createdBy)
     return quest
 end
 
+--- Creates a new draft quest that exists in memory but is not persisted
+--- @param title string The quest title (optional)
+--- @param createdBy string The Codex player ID of the creator (optional)
+--- @return QTQuest instance The newly created draft quest
+function QTQuestManager:CreateDraftQuest(title, createdBy)
+    local quest = QTQuest:new(self)
+    local timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+
+    -- Set properties directly without calling UpdateProperties (which persists)
+    quest.title = title or "New Quest"
+    quest.description = ""
+    quest.category = QTQuest.CATEGORY.MAIN
+    quest.status = QTQuest.STATUS.NOT_STARTED
+    quest.priority = QTQuest.PRIORITY.MEDIUM
+    quest.questGiver = ""
+    quest.location = ""
+    quest.rewards = ""
+    quest.rewardsClaimed = false
+    quest.visibleToPlayers = true
+    quest.createdBy = createdBy or ""
+    quest.createdTimestamp = timestamp
+    quest.modifiedTimestamp = timestamp
+
+    return quest
+end
+
+--- Saves a draft quest to persistent storage
+--- @param quest QTQuest The draft quest to save
+--- @return boolean success Whether the save was successful
+function QTQuestManager:SaveDraftQuest(quest)
+    if not quest then
+        return false
+    end
+
+    -- Use UpdateProperties to persist the quest
+    quest:UpdateProperties({
+        title = quest.title,
+        description = quest.description,
+        category = quest.category,
+        status = quest.status,
+        priority = quest.priority,
+        questGiver = quest.questGiver,
+        location = quest.location,
+        rewards = quest.rewards,
+        rewardsClaimed = quest.rewardsClaimed,
+        visibleToPlayers = quest.visibleToPlayers,
+        createdBy = quest.createdBy,
+        createdTimestamp = quest.createdTimestamp,
+        modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }, "Saved draft quest")
+
+    return true
+end
+
 --- Gets a quest by its ID
 --- @param questId string The GUID of the quest
 --- @return QTQuest|nil instance The quest instance or nil if not found
