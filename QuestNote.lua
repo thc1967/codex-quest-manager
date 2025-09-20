@@ -1,7 +1,7 @@
 --- Individual note attached to quests or objectives with author tracking
 --- Supports both player notes and director notes with visibility controls
 --- @class QTQuestNote
---- @field _manaager QTQuestManager The quest manager for document operations
+--- @field _manager QTQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this note
 QTQuestNote = RegisterGameType("QTQuestNote")
 QTQuestNote.__index = QTQuestNote

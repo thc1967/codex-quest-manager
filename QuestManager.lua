@@ -139,17 +139,26 @@ function QTQuestManager:GetQuest(questId)
     return nil
 end
 
---- Gets all quests
+--- Gets all quests visible to the current user
 --- @return table quests Array of QTQuest instances
 function QTQuestManager:GetAllQuests()
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
     local quests = {}
 
     if doc.data and doc.data.quests then
-        local questCount = 0
         for questId, _ in pairs(doc.data.quests) do
-            questCount = questCount + 1
-            table.insert(quests, QTQuest:new(self, questId))
+            local quest = QTQuest:new(self, questId)
+
+            -- Apply user-based filtering
+            if dmhub.isDM then
+                -- DMs see all quests
+                table.insert(quests, quest)
+            else
+                -- Players see quests that are visible to players OR quests they created
+                if quest:GetVisibleToPlayers() or quest:GetCreatedBy() == dmhub.userid then
+                    table.insert(quests, quest)
+                end
+            end
         end
     end
 

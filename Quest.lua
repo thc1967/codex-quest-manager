@@ -161,7 +161,7 @@ end
 --- Gets whether this quest is visible to players
 --- @return boolean visible True if players can see this quest
 function QTQuest:GetVisibleToPlayers()
-    return self._manager:GetQuestField(self.id, "visibleToPlayers") or true
+    return self._manager:GetQuestField(self.id, "visibleToPlayers") or (not dmhub.isDM)
 end
 
 --- Sets whether this quest is visible to players

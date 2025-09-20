@@ -296,13 +296,55 @@ function QTQuestManagerWindow:_createWindow()
             -- Main content area
             gui.Panel{
                 width = "100%",
-                height = "100%",
+                height = "100%-60", -- Leave space for footer
                 halign = "center",
                 valign = "center",
                 flow = "vertical",
                 children = {
                     tabsPanel,
                     contentPanel,
+                }
+            },
+
+            -- Footer with Confirm/Cancel buttons
+            gui.Panel{
+                width = "100%",
+                height = 60,
+                flow = "none",
+                classes = {"dialog-header"},
+                borderColor = Styles.textColor,
+                border = { y1 = 2 },
+                children = {
+                    gui.Panel{
+                        width = "auto",
+                        height = 50,
+                        halign = "center",
+                        valign = "center",
+                        flow = "horizontal",
+                        children = {
+                            gui.Button{
+                                text = "Confirm",
+                                width = 120,
+                                height = 40,
+                                hmargin = 40,
+                                classes = {"QTButton", "QTBase"},
+                                click = function(element)
+                                    element:Get("questManagerWindow"):FireEventTree("saveQuest")
+                                end
+                            },
+                            gui.Button{
+                                text = "Cancel",
+                                width = 120,
+                                height = 40,
+                                hmargin = 40,
+                                classes = {"QTButton", "QTBase"},
+                                escapeActivates = true,
+                                click = function(element)
+                                    element:Get("questManagerWindow"):FireEvent("escape")
+                                end
+                            }
+                        }
+                    }
                 }
             },
 
@@ -413,6 +455,8 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         width = "100%",
         height = "100%",
         flow = "vertical",
+        hpad = 20,
+        vpad = 20,
         styles = {
             gui.Style{
                 selectors = {"#objectivesPanel"},
@@ -512,8 +556,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     -- Create form field elements
     local titleField = gui.Input{
         width = "100%",
-        height = 30,
-        classes = {"field-input"},
+        classes = {"QTInput", "QTBase"},
         text = quest:GetTitle() or "New Quest",
         placeholderText = "Enter quest title...",
         lineType = "Single"
@@ -522,7 +565,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local descriptionField = gui.Input{
         width = "100%",
         height = 70,
-        classes = {"field-input", "multiline"},
+        classes = {"QTInput", "QTBase"},
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
         lineType = "MultiLine",
@@ -531,8 +574,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local questGiverField = gui.Input{
         width = "100%",
-        height = 30,
-        classes = {"field-input"},
+        classes = {"QTInput", "QTBase"},
         text = quest:GetQuestGiver() or "",
         placeholderText = "Who gave this quest?",
         lineType = "Single"
@@ -540,8 +582,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local locationField = gui.Input{
         width = "100%",
-        height = 30,
-        classes = {"field-input"},
+        classes = {"QTInput", "QTBase"},
         text = quest:GetLocation() or "",
         placeholderText = "Where does this quest take place?",
         lineType = "Single"
@@ -549,8 +590,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local rewardsField = gui.Input{
         width = "100%",
-        height = 30,
-        classes = {"field-input"},
+        classes = {"QTInput", "QTBase"},
         text = quest:GetRewards() or "",
         placeholderText = "What rewards does this quest offer?",
         lineType = "Single"
@@ -585,8 +625,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local categoryDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        height = 30,
-        classes = {"field-dropdown"},
+        classes = {"QTDropdown", "QTBase"},
         options = categoryOptions,
         idChosen = quest:GetCategory() or QTQuest.CATEGORY.MAIN
     }
@@ -594,8 +633,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local priorityDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        height = 30,
-        classes = {"field-dropdown"},
+        classes = {"QTDropdown", "QTBase"},
         options = priorityOptions,
         idChosen = quest:GetPriority() or QTQuest.PRIORITY.MEDIUM
     }
@@ -603,8 +641,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local statusDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        height = 30,
-        classes = {"field-dropdown"},
+        classes = {"QTDropdown", "QTBase"},
         options = statusOptions,
         idChosen = quest:GetStatus() or QTQuest.STATUS.NOT_STARTED
     }
@@ -612,21 +649,19 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local rewardsClaimedCheckbox = gui.Check{
         text = "Rewards Claimed",
         width = 160,
-        height = 30,
         halign = "left",
         valign = "center",
-        classes = {"field-checkbox"},
+        classes = {"QTCheck", "QTBase"},
         value = quest:GetRewardsClaimed() or false
     }
 
     local visibleToPlayersCheckbox = gui.Check{
         text = "Visible to Players",
         width = 160,
-        height = 30,
         halign = "left",
         valign = "center",
-        classes = {"field-checkbox"},
-        value = quest:GetVisibleToPlayers() or true
+        classes = {"QTCheck", "QTBase"},
+        value = quest:GetVisibleToPlayers() or (not dmhub.isDM)
     }
 
     -- Helper function to format timestamp
@@ -700,6 +735,12 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         end
     end
 
+    -- Modified saveQuest function that closes window after saving
+    local saveQuestAndClose = function(element)
+        saveQuest() -- Call the original save logic
+        element:Get("questManagerWindow"):FireEvent("closeQuestManager")
+    end
+
     -- Build the form layout with simplest possible structure
     return gui.Panel{
         width = "100%",
@@ -709,17 +750,19 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         styles = QTQuestManagerWindow._getDialogStyles(),
         hpad = 20,
         vpad = 10,
+
+        saveQuest = saveQuestAndClose, -- Add save function as event handler that closes window
         children = {
             -- Title row
             gui.Panel{
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Label{
                         text = "Quest Title:",
-                        classes = {"field-label"},
+                        classes = {"QTLabel", "QTBase"},
                         width = "100%",
                         height = 20
                     },
@@ -750,11 +793,11 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 100,
                 flow = "vertical",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Label{
                         text = "Description:",
-                        classes = {"field-label"},
+                        classes = {"QTLabel", "QTBase"},
                         width = "100%",
                         height = 20
                     },
@@ -767,7 +810,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "horizontal",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Panel{
                         width = "33%",
@@ -777,7 +820,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Category:",
-                                classes = {"field-label"},
+                                classes = {"QTLabel", "QTBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -792,7 +835,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Priority:",
-                                classes = {"field-label"},
+                                classes = {"QTLabel", "QTBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -807,7 +850,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Status:",
-                                classes = {"field-label"},
+                                classes = {"QTLabel", "QTBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -822,11 +865,11 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Label{
                         text = "Quest Giver:",
-                        classes = {"field-label"},
+                        classes = {"QTLabel", "QTBase"},
                         width = "100%",
                         height = 20
                     },
@@ -839,11 +882,11 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Label{
                         text = "Location:",
-                        classes = {"field-label"},
+                        classes = {"QTLabel", "QTBase"},
                         width = "100%",
                         height = 20
                     },
@@ -856,11 +899,11 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 5,
+                vmargin = 10,
                 children = {
                     gui.Label{
                         text = "Rewards:",
-                        classes = {"field-label"},
+                        classes = {"QTLabel", "QTBase"},
                         width = "100%",
                         height = 20
                     },
@@ -879,23 +922,6 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 }
             },
 
-            -- Footer
-            gui.Panel{
-                width = "95%",
-                height = 50,
-                flow = "horizontal",
-                classes = {"dialog-header"},
-                children = {
-                    gui.Button{
-                        text = quest.id and "Save Quest" or "Create Quest",
-                        width = "30%",
-                        height = 35,
-                        halign = "center",
-                        classes = {"create-button"},
-                        click = saveQuest
-                    }
-                }
-            },
 
             -- Timestamps row
             -- gui.Panel{
@@ -943,9 +969,49 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 end
 
 --- Gets the styling configuration for the dialog form
---- @return table styles Array of GUI styles for the dialog
+--- @return table styles Array of GUI styles for the dialog using QTBase inheritance
 function QTQuestManagerWindow._getDialogStyles()
     return {
+        -- QTBase: Foundation style for all Quest Manager controls
+        gui.Style{
+            selectors = {"QTBase"},
+            fontSize = 18,
+            fontFace = "Berling",
+            color = Styles.textColor,
+            height = 40,
+        },
+
+        -- QT Control Types: Inherit from QTBase, add specific properties
+        gui.Style{
+            selectors = {"QTLabel", "QTBase"},
+            bold = true,
+            textAlignment = "left"
+        },
+        gui.Style{
+            selectors = {"QTInput", "QTBase"},
+            bgcolor = Styles.backgroundColor,
+            borderWidth = 1,
+            borderColor = Styles.textColor
+        },
+        gui.Style{
+            selectors = {"QTDropdown", "QTBase"},
+            bgcolor = Styles.backgroundColor,
+            borderWidth = 1,
+            borderColor = Styles.textColor
+        },
+        gui.Style{
+            selectors = {"QTCheck", "QTBase"},
+            -- Inherits all QTBase properties
+        },
+        gui.Style{
+            selectors = {"QTButton", "QTBase"},
+            fontSize = 40,
+            textAlignment = "center",
+            bold = true,
+            height = 35  -- Override QTBase height for buttons
+        },
+
+        -- Legacy dialog styles (kept for compatibility)
         gui.Style{
             selectors = {"dialog-header"},
             bgcolor = Styles.textColor,
@@ -960,46 +1026,6 @@ function QTQuestManagerWindow._getDialogStyles()
         gui.Style{
             selectors = {"dialog-content"}
         },
-        gui.Style{
-            selectors = {"field-label"},
-            fontSize = 14,
-            bold = true,
-            color = Styles.textColor,
-            textAlignment = "left"
-        },
-        gui.Style{
-            selectors = {"field-input"},
-            fontSize = 13,
-            color = Styles.textColor,
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"field-dropdown"},
-            fontSize = 13,
-            color = Styles.textColor,
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"create-button"},
-            fontSize = 13,
-            color = Styles.textColor,
-            textAlignment = "center",
-            bold = true
-        },
-        gui.Style{
-            selectors = {"field-checkbox"},
-            color = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"field-readonly"},
-            fontSize = 12,
-            color = Styles.textColor,
-            bgcolor = "transparent",
-        }
     }
 end
 
