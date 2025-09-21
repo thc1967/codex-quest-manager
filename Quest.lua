@@ -17,18 +17,18 @@ QTQuest.STATUS = {
 
 --- Valid category values for quests
 QTQuest.CATEGORY = {
-    MAIN = "main",
-    SIDE = "side",
-    PERSONAL = "personal",
-    FACTION = "faction",
-    TUTORIAL = "tutorial"
+    MAIN = "Main",
+    SIDE = "Side",
+    PERSONAL = "Personal",
+    FACTION = "Faction",
+    TUTORIAL = "Tutorial"
 }
 
 --- Valid priority values for quests
 QTQuest.PRIORITY = {
-    HIGH = "high",
-    MEDIUM = "medium",
-    LOW = "low"
+    HIGH = "High",
+    MEDIUM = "Medium",
+    LOW = "Low"
 }
 
 --- Creates a new quest instance

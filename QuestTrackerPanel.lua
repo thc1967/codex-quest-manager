@@ -246,35 +246,21 @@ function QTQuestTrackerPanel:_buildQuestItem(quest)
                         text = title,
                         classes = {"quest-title"},
                         width = "100%",
-                        height = 25,
+                        height = 20,
                         textAlignment = "left"
                     },
                     gui.Panel {
                         width = "100%",
-                        height = 20,
+                        height = 15,
                         flow = "horizontal",
                         children = {
                             gui.Label {
-                                text = statusText,
+                                text = string.format("%s; %s Priority", statusText, priority),
                                 classes = {"quest-status"},
-                                width = "33%",
-                                height = 20,
+                                width = "100%",
+                                height = 15,
                                 textAlignment = "left"
                             },
-                            gui.Label {
-                                text = category:gsub("_", " "),
-                                classes = {"quest-category"},
-                                width = "33%",
-                                height = 20,
-                                textAlignment = "center"
-                            },
-                            gui.Label {
-                                text = priority .. " priority",
-                                classes = {"quest-priority"},
-                                width = "34%",
-                                height = 20,
-                                textAlignment = "right"
-                            }
                         }
                     }
                 }
@@ -296,14 +282,11 @@ end
 --- @param categoryId string The category ID from QTQuest.CATEGORY
 --- @return string displayName The user-friendly category name
 function QTQuestTrackerPanel:_getCategoryDisplayName(categoryId)
-    local categoryNames = {
-        [QTQuest.CATEGORY.MAIN] = "Main Quests",
-        [QTQuest.CATEGORY.SIDE] = "Side Quests",
-        [QTQuest.CATEGORY.PERSONAL] = "Personal Quests",
-        [QTQuest.CATEGORY.FACTION] = "Faction Quests",
-        [QTQuest.CATEGORY.TUTORIAL] = "Tutorial Quests"
-    }
-    return categoryNames[categoryId] or "Other Quests"
+    if not categoryId or categoryId == "" then
+        return "Other Quests"
+    end
+
+    return categoryId .. " Quests"
 end
 
 -- Triangle icon styles (based on MapsPanel pattern)
