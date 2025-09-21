@@ -150,90 +150,10 @@ function QTQuestManagerWindow:_createWindow()
     local objectivesPanel = QTQuestManagerWindow.CreateObjectivesPanel(self.questManager, self.quest)
     objectivesPanel.classes = {"hidden"}
 
-    local notesPanel = gui.Panel{
-        width = "100%",
-        height = "100%",
-        halign = "left",
-        valign = "top",
-        classes = {"hidden"},
-        children = {
-            gui.Label{
-                text = "NOTES TAB CONTENT\n(placeholder)",
-                width = "98%",
-                fontSize = 20,
-                color = Styles.textColor,
-                textAlignment = "left",
-                halign = "center",
-                valign = "top"
-            }
-        }
-    }
+    local notesPanel = QTQuestManagerWindow.CreateNotesPanel(self.questManager, self.quest)
+    notesPanel.classes = {"hidden"}
 
-    local debugPanel = gui.Panel{
-        width = "100%",
-        height = "100%",
-        flow = "vertical",
-        valign = "top",
-        classes = {"hidden"},
-        borderWidth = 3,
-        borderColor = "orange",
-        children = {
-            gui.Label{
-                text = "DEBUG TAB: Panel has valign=top, flow=vertical",
-                fontSize = 16,
-                color = "yellow",
-                bgcolor = "black",
-                textAlignment = "left",
-                width = "100%",
-                height = 30,
-                valign = "top",
-            },
-            gui.Label{
-                text = "Test 1: This should appear at TOP if positioning works",
-                fontSize = 14,
-                color = "cyan",
-                textAlignment = "left",
-                width = "100%",
-                height = 25,
-                valign = "top",
-            },
-            -- gui.Label{
-            --     text = "Test 2: This should appear BELOW Test 1",
-            --     fontSize = 14,
-            --     color = "lime",
-            --     textAlignment = "left",
-            --     width = "100%",
-            --     height = 25
-            -- },
-            -- gui.Label{
-            --     text = "Test 3: If all text appears CENTERED, the ContentPanel is centering us",
-            --     fontSize = 14,
-            --     color = "magenta",
-            --     textAlignment = "left",
-            --     width = "100%",
-            --     height = 25
-            -- },
-            -- gui.Panel{
-            --     width = "100%",
-            --     height = 200,
-            --     borderWidth = 2,
-            --     borderColor = "white",
-            --     children = {
-            --         gui.Label{
-            --             text = "NESTED PANEL: Should be at top of white border",
-            --             fontSize = 12,
-            --             color = "orange",
-            --             textAlignment = "left",
-            --             width = "100%",
-            --             height = 20,
-            --             valign = "top"
-            --         }
-            --     }
-            -- }
-        }
-    }
-
-    local tabPanels = {questPanel, objectivesPanel, notesPanel, debugPanel}
+    local tabPanels = {questPanel, objectivesPanel, notesPanel}
 
     -- Content panel that holds all tab panels
     local contentPanel = gui.Panel{
@@ -241,8 +161,6 @@ function QTQuestManagerWindow:_createWindow()
         height = "100%",
         flow = "none",
         valign = "top",
-        borderWidth = 5,
-        borderColor = "red",
         children = tabPanels,
 
         showTab = function(element, tabIndex)
@@ -261,7 +179,7 @@ function QTQuestManagerWindow:_createWindow()
     -- Tab selection function
     local selectTab = function(tabName)
         selectedTab = tabName
-        local index = tabName == "Quest" and 1 or tabName == "Objectives" and 2 or tabName == "Notes" and 3 or 4
+        local index = tabName == "Quest" and 1 or tabName == "Objectives" and 2 or 3
 
         -- Hide/show tab content
         contentPanel:FireEventTree("showTab", index)
@@ -298,13 +216,6 @@ function QTQuestManagerWindow:_createWindow()
                 text = "Notes",
                 data = {tabName = "Notes"},
                 press = function() selectTab("Notes") end,
-                gui.Panel{classes = {"questTabBorder"}},
-            },
-            gui.Label{
-                classes = {"questTab"},
-                text = "Debug",
-                data = {tabName = "Debug"},
-                press = function() selectTab("Debug") end,
                 gui.Panel{classes = {"questTabBorder"}},
             }
         }
@@ -459,8 +370,6 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         valign = "top",
         hpad = 20,
         vpad = 20,
-        borderWidth = 5,
-        borderColor = "blue",
         styles = QTQuestManagerWindow._getDialogStyles(),
         monitorGame = questManager:GetDocumentPath(),
         refreshGame = function(element)
@@ -536,7 +445,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
             for i, note in ipairs(notes) do
                 -- Add divider before note (except first one)
                 if i > 1 then
-                    noteChildren[#noteChildren + 1] = gui.Divider { width = "90%" }
+                    noteChildren[#noteChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
                 end
 
                 -- Note item
@@ -550,8 +459,9 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
     return gui.Panel{
         id = "notesPanel",
         width = "98%",
-        height = "100%",
+        height = "90%",
         flow = "vertical",
+        valign = "top",
         hpad = 20,
         vpad = 20,
         styles = QTQuestManagerWindow._getDialogStyles(),
@@ -566,20 +476,27 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
         children = {
             -- Scrollable notes area
             gui.Panel{
-                id = "notesScrollArea",
                 width = "100%",
-                height = "90%",
-                flow = "vertical",
-                vscroll = true,
+                height = "100%-60",
                 valign = "top",
-                children = buildNotesList()
+                vscroll = true,
+                children = {
+                    gui.Panel{
+                        id = "notesScrollArea",
+                        width = "100%",
+                        height = "auto",
+                        flow = "vertical",
+                        valign = "top",
+                        children = buildNotesList()
+                    }
+                }
             },
 
             -- Add note button (always visible at bottom)
             gui.AddButton {
                 halign = "right",
                 vmargin = 5,
-                hmargin = 100,
+                hmargin = 40,
                 linger = function(element)
                     gui.Tooltip("Add a new note")(element)
                 end,
@@ -589,6 +506,28 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
             }
         }
     }
+end
+
+--- Helper function to get player display name and color from user ID
+--- @param userId string The user ID to look up
+--- @return string coloredDisplayName The player's display name with HTML color tags, or "{unknown}" if not found
+function QTQuestManagerWindow.GetPlayerDisplayName(userId)
+    if not userId or userId == "" then
+        return "{unknown}"
+    end
+
+    local sessionInfo = dmhub.GetSessionInfo(userId)
+    if sessionInfo and sessionInfo.displayName then
+        local displayName = sessionInfo.displayName
+        if sessionInfo.displayColor and sessionInfo.displayColor.tostring then
+            local colorCode = sessionInfo.displayColor.tostring
+            return "<color=" .. colorCode .. ">" .. displayName .. "</color>"
+        else
+            return displayName
+        end
+    end
+
+    return "{unknown}"
 end
 
 --- Creates a single note item display
@@ -608,11 +547,14 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
         displayTimestamp = timestamp:gsub("T", " "):gsub("Z", ""):gsub("%-", "/")
     end
 
+    -- Get player display name
+    local authorDisplayName = QTQuestManagerWindow.GetPlayerDisplayName(authorId)
+
     -- Build delete button if user has permission
     local headerChildren = {
         gui.Label {
-            text = "By: " .. authorId .. " at " .. displayTimestamp,
-            width = "85%",
+            text = "By: " .. authorDisplayName .. " at " .. displayTimestamp,
+            width = "100%",
             height = 20,
             classes = {"QTLabel", "QTBase"},
             textAlignment = "left"
@@ -642,6 +584,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
         width = "90%",
         height = "auto",
         flow = "vertical",
+        valign = "top",
         vmargin = 5,
         children = {
             -- Header with author, timestamp, and delete button
@@ -649,6 +592,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
                 width = "100%",
                 height = 25,
                 flow = "horizontal",
+                valign = "top",
                 children = headerChildren
             },
             -- Note content
@@ -797,7 +741,6 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
     local noteContent = ""
 
     local addNoteWindow = gui.Panel{
-        id = "addNoteModal",
         width = 500,
         height = 300,
         halign = "center",
@@ -817,23 +760,14 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                 text = "Add Note",
                 width = "100%",
                 height = 30,
+                fontSize = "24",
                 classes = {"QTLabel", "QTBase"},
                 textAlignment = "center",
                 halign = "center"
             },
 
-            -- Note content input (using a large input field as text area)
+            -- Note content input
             gui.Input{
-
-                -- width = "100%",
-                -- height = 70,
-                -- classes = {"QTInput", "QTBase"},
-                -- text = quest:GetDescription() or "",
-                -- placeholderText = "Enter quest description...",
-                -- lineType = "MultiLine",
-                -- textAlignment = "topleft"
-
-                id = "noteContentInput",
                 width = "95%",
                 height = 150,
                 classes = {"QTInput", "QTBase"},
@@ -846,58 +780,52 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                 end
             },
 
-            -- Button panel (matching main window structure)
+            -- Button panel
             gui.Panel{
-                width = "auto",
+                width = "100%",
                 height = 50,
                 halign = "center",
                 valign = "center",
                 flow = "horizontal",
                 children = {
-                    -- Confirm button
-                    gui.Button{
-                        text = "Confirm",
-                        width = 120,
-                        height = 40,
-                        hmargin = 40,
-                        classes = {"QTButton", "QTBase"},
-                        click = function(element)
-                            if noteContent and noteContent:trim() ~= "" then
-                                quest:AddNote(noteContent, dmhub.userid)
-                                -- Use FireEvent refreshAll pattern like character sheet
-                                if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
-                                end
-                            end
-                            element:Get("addNoteModal"):DestroySelf()
-                        end
-                    },
-                    -- Cancel button
+                    -- Cancel button (first)
                     gui.Button{
                         text = "Cancel",
                         width = 120,
                         height = 40,
-                        hmargin = 40,
+                        hmargin = 20,
                         classes = {"QTButton", "QTBase"},
-                        escapeActivates = true,
                         click = function(element)
-                            element:Get("addNoteModal"):DestroySelf()
+                            gui.CloseModal()
+                        end
+                    },
+                    -- Confirm button (second)
+                    gui.Button{
+                        text = "Add Note",
+                        width = 120,
+                        height = 40,
+                        hmargin = 20,
+                        classes = {"QTButton", "QTBase"},
+                        click = function(element)
+                            if noteContent and noteContent:trim() ~= "" then
+                                quest:AddNote(noteContent, dmhub.userid)
+                                if QTQuestManagerWindow.instance then
+                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                end
+                            end
+                            gui.CloseModal()
                         end
                     }
                 }
             }
         },
 
-        -- ESC key support
         escape = function(element)
-            element:DestroySelf()
+            gui.CloseModal()
         end
     }
 
-    -- Add to main dialog panel
-    if gamehud and gamehud.mainDialogPanel then
-        gamehud.mainDialogPanel:AddChild(addNoteWindow)
-    end
+    gui.ShowModal(addNoteWindow)
 end
 
 --- Shows confirmation dialog for deleting a note
@@ -905,22 +833,12 @@ end
 --- @param noteId string The note ID to delete
 function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
     local displayText = "Are you sure you want to delete this note?"
-    local onConfirm = function()
-        quest:RemoveNote(noteId)
-        -- Use FireEvent refreshAll pattern like character sheet
-        if QTQuestManagerWindow.instance then
-            QTQuestManagerWindow.instance:FireEvent("refreshAll")
-        end
-    end
 
-    -- Create a simple confirmation dialog
     local confirmationWindow = gui.Panel{
-        id = "deleteNoteModal",
         width = 400,
-        height = 150,
+        height = 200,
         halign = "center",
         valign = "center",
-        floating = "true",
         bgcolor = "#111111ff",
         borderWidth = 2,
         borderColor = Styles.textColor,
@@ -928,20 +846,33 @@ function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
         flow = "vertical",
         hpad = 20,
         vpad = 20,
+        styles = QTQuestManagerWindow._getDialogStyles(),
 
         children = {
+            -- Header
+            gui.Label{
+                text = "Delete Confirmation",
+                fontSize = 24,
+                width = "100%",
+                height = 30,
+                classes = {"QTLabel", "QTBase"},
+                textAlignment = "center",
+                halign = "center"
+            },
+
+            -- Confirmation message
             gui.Label{
                 text = displayText,
                 width = "100%",
-                height = 60,
-                fontSize = 14,
-                color = Styles.textColor,
+                height = 80,
+                classes = {"QTLabel", "QTBase"},
                 textAlignment = "center",
                 textWrap = true,
                 halign = "center",
-                vmargin =50
+                valign = "center"
             },
 
+            -- Button panel
             gui.Panel{
                 width = "100%",
                 height = 40,
@@ -949,29 +880,30 @@ function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
                 halign = "center",
                 valign = "center",
                 children = {
-                    gui.Button{
-                        text = "Delete",
-                        width = 80,
-                        height = 30,
-                        hmargin = 10,
-                        fontSize = 14,
-                        bgcolor = "#cc0000",
-                        color = "white",
-                        bold = true,
-                        click = function(element)
-                            onConfirm()
-                            element:Get("deleteNoteModal"):DestroySelf()
-                        end
-                    },
+                    -- Cancel button (first)
                     gui.Button{
                         text = "Cancel",
-                        width = 80,
-                        height = 30,
+                        width = 120,
+                        height = 40,
                         hmargin = 10,
-                        fontSize = 14,
-                        color = Styles.textColor,
+                        classes = {"QTButton", "QTBase"},
                         click = function(element)
-                            element:Get("deleteNoteModal"):DestroySelf()
+                            gui.CloseModal()
+                        end
+                    },
+                    -- Delete button (second)
+                    gui.Button{
+                        text = "Delete",
+                        width = 120,
+                        height = 40,
+                        hmargin = 10,
+                        classes = {"QTButton", "QTBase"},
+                        click = function(element)
+                            quest:RemoveNote(noteId)
+                            if QTQuestManagerWindow.instance then
+                                QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                            end
+                            gui.CloseModal()
                         end
                     }
                 }
@@ -979,13 +911,11 @@ function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
         },
 
         escape = function(element)
-            element:DestroySelf()
+            gui.CloseModal()
         end
     }
 
-    if gamehud and gamehud.mainDialogPanel then
-        gamehud.mainDialogPanel:AddChild(confirmationWindow)
-    end
+    gui.ShowModal(confirmationWindow)
 end
 
 
