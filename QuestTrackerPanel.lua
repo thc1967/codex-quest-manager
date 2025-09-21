@@ -425,13 +425,10 @@ function QTQuestTrackerPanel:_showEditQuestDialog(questId)
     end
 end
 
---- Shows a confirmation dialog before deleting a quest
---- @param questId string The ID of the quest to delete
---- @param questTitle string The title of the quest for confirmation message
-function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
-    local questTrackerPanel = self
-
-    -- Create confirmation modal
+--- Shows a reusable confirmation dialog
+--- @param displayText string The message to show in the confirmation dialog
+--- @param onConfirm function The callback function to call if user confirms
+function QTQuestTrackerPanel:_showConfirmationDialog(displayText, onConfirm)
     local confirmationWindow = gui.Panel{
         id = "deleteConfirmationModal",
         width = 400,
@@ -449,7 +446,7 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
         children = {
             -- Title
             gui.Label{
-                text = "Delete Quest",
+                text = "Confirm Action",
                 width = "100%",
                 height = 30,
                 fontSize = 18,
@@ -461,7 +458,7 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
 
             -- Confirmation message
             gui.Label{
-                text = "Are you sure you want to delete quest " .. questTitle .. "?",
+                text = displayText,
                 width = "100%",
                 height = 60,
                 fontSize = 14,
@@ -482,7 +479,7 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
                 children = {
                     -- Confirm button
                     gui.Button{
-                        text = "Delete",
+                        text = "Confirm",
                         width = 80,
                         height = 30,
                         hmargin = 10,
@@ -491,9 +488,7 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
                         color = "white",
                         bold = true,
                         click = function(element)
-                            -- Delete the quest
-                            questTrackerPanel.questManager:DeleteQuest(questId)
-                            -- Close the modal
+                            onConfirm()
                             element:Get("deleteConfirmationModal"):DestroySelf()
                         end
                     },
@@ -506,7 +501,6 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
                         fontSize = 14,
                         color = Styles.textColor,
                         click = function(element)
-                            -- Just close the modal
                             element:Get("deleteConfirmationModal"):DestroySelf()
                         end
                     }
@@ -524,6 +518,18 @@ function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
     if gamehud and gamehud.mainDialogPanel then
         gamehud.mainDialogPanel:AddChild(confirmationWindow)
     end
+end
+
+--- Shows a confirmation dialog before deleting a quest
+--- @param questId string The ID of the quest to delete
+--- @param questTitle string The title of the quest for confirmation message
+function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
+    local displayText = "Are you sure you want to delete quest " .. questTitle .. "?"
+    local onConfirm = function()
+        self.questManager:DeleteQuest(questId)
+    end
+
+    self:_showConfirmationDialog(displayText, onConfirm)
 end
 
 --- Shows the Quest Manager window

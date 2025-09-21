@@ -206,12 +206,10 @@ function QTQuest:AddObjective(description)
     local objective = QTQuestObjective:new(self._manager)
     objective:UpdateProperties(
         {
-            description = description,
-            status = QTQuestObjective.STATUS.NOT_STARTED,
-            createdTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            description = description
         },
-        "Added objective to quest"
+        "Added objective to quest",
+        true  -- Apply defaults
     )
 
     self._manager:AddObjectiveToQuest(self.id, objective.id)
@@ -224,66 +222,41 @@ function QTQuest:RemoveObjective(objectiveId)
     self._manager:RemoveObjectiveFromQuest(self.id, objectiveId)
 end
 
---- Gets all player notes for this quest
+--- Gets all notes for this quest sorted by timestamp (newest first)
 --- @return table notes Array of QTQuestNote instances
-function QTQuest:GetPlayerNotes()
-    local noteIds = self._manager:GetQuestField(self.id, "playerNoteIds") or {}
+function QTQuest:GetNotes()
+    local noteIds = self._manager:GetQuestField(self.id, "noteIds") or {}
     local notes = {}
     for _, noteId in ipairs(noteIds) do
         table.insert(notes, QTQuestNote:new(self._manager, noteId))
     end
+
+    -- Sort by timestamp descending (newest first)
+    table.sort(notes, function(a, b)
+        local timestampA = a:GetTimestamp()
+        local timestampB = b:GetTimestamp()
+        return timestampA > timestampB
+    end)
+
     return notes
 end
 
---- Adds a new player note to this quest
+--- Adds a new note to this quest
 --- @param content string The note content
 --- @param authorId string The Codex player ID of the author
 --- @return QTQuestNote note The newly created note
-function QTQuest:AddPlayerNote(content, authorId)
+function QTQuest:AddNote(content, authorId)
     local note = QTQuestNote:new(self._manager)
     note:UpdateProperties(
         {
             content = content,
             authorId = authorId,
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            visibleToPlayers = true
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         },
-        "Added player note to quest"
+        "Added note to quest"
     )
 
-    self._manager:AddNoteToQuest(self.id, note.id, "player")
-    return note
-end
-
---- Gets all director notes for this quest
---- @return table notes Array of QTQuestNote instances
-function QTQuest:GetDirectorNotes()
-    local noteIds = self._manager:GetQuestField(self.id, "directorNoteIds") or {}
-    local notes = {}
-    for _, noteId in ipairs(noteIds) do
-        table.insert(notes, QTQuestNote:new(self._manager, noteId))
-    end
-    return notes
-end
-
---- Adds a new director note to this quest
---- @param content string The note content
---- @param authorId string The Codex player ID of the director
---- @param visibleToPlayers boolean Whether players can see this note
---- @return QTQuestNote note The newly created note
-function QTQuest:AddDirectorNote(content, authorId, visibleToPlayers)
-    local note = QTQuestNote:new(self._manager)
-    note:UpdateProperties(
-        {
-            content = content,
-            authorId = authorId,
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            visibleToPlayers = visibleToPlayers or false
-        },
-        "Added director note to quest"
-    )
-
-    self._manager:AddNoteToQuest(self.id, note.id, "director")
+    self._manager:AddNoteToQuest(self.id, note.id)
     return note
 end
 

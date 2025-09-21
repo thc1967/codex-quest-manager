@@ -105,7 +105,18 @@ function QTQuestManagerWindow:new(questManager, quest)
         return nil
     end
 
+    -- Set as global instance for refresh events (like CharacterSheet.instance)
+    QTQuestManagerWindow.instance = instance
+
     return instance
+end
+
+--- Fires an event on the window element (like CharacterSheet.instance:FireEvent)
+--- @param eventName string The name of the event to fire
+function QTQuestManagerWindow:FireEvent(eventName)
+    if self.windowElement then
+        self.windowElement:FireEvent(eventName)
+    end
 end
 
 --- Creates and shows the Quest Manager window
@@ -116,62 +127,122 @@ function QTQuestManagerWindow:Show()
 
     self.isOpen = true
     local questWindow = self:_createWindow()
+    self.windowElement = questWindow
 
-    -- Add to main dialog panel
-    if gamehud and gamehud.mainDialogPanel then
-        gamehud.mainDialogPanel:AddChild(questWindow)
-        questWindow:FireEvent("show")
-    end
+    -- Show as modal
+    gui.ShowModal(questWindow)
 end
 
---- Creates the main window structure
+--- Creates the main window structure - WITH QUEST TAB CONTENT
 --- @return table panel The main window panel
 function QTQuestManagerWindow:_createWindow()
     local questManagerWindow = self
-    local selectedTab = QTQuestManagerWindow.defaultTab
+    local selectedTab = "Quest"
 
-    -- Sort tabs by order
-    table.sort(QTQuestManagerWindow.TabOptions, function(a, b)
-        return tostring(a.order or a.text) < tostring(b.order or b.text)
-    end)
-
-    -- Create tab panels
-    local tabPanels = {}
-    for _, tabOption in ipairs(QTQuestManagerWindow.TabOptions) do
-        local panel = nil
-        if tabOption.panel ~= nil then
-            panel = tabOption.panel(self.questManager, self.quest)
-            if panel == nil then
-                print("QuestManagerWindow tab " .. tabOption.id .. " returned nil from panel function")
-            end
-        else
-            print("QuestManagerWindow tab " .. tabOption.id .. " must define a panel function")
-        end
-        tabPanels[#tabPanels + 1] = panel
+    -- Common close function for Cancel button and X button
+    local closeWindow = function()
+        gui.CloseModal()
     end
 
-    -- Calculate window dimensions and scaling
-    local windowHeight = 800
-    local windowWidth = 1200
-    local scale = 1
+    -- Tab content panels
+    local questPanel = QTQuestManagerWindow.CreateQuestPanel(self.questManager, self.quest)
 
-    local heightPercent = (dmhub.uiscale * windowHeight) / dmhub.screenDimensions.y
-    local minPercent = 800 / 1080
-    local xdelta = 0
-    if heightPercent < minPercent then
-        scale = heightPercent / minPercent
-        xdelta = -(1 - scale) * windowWidth / 2
-    end
+    local objectivesPanel = QTQuestManagerWindow.CreateObjectivesPanel(self.questManager, self.quest)
+    objectivesPanel.classes = {"hidden"}
 
-    -- Main content area
-    local contentPanel = gui.Panel{
-        id = "questContentPanel",
+    local notesPanel = gui.Panel{
         width = "100%",
         height = "100%",
-        scale = scale,
-        halign = "center",
-        x = xdelta,
+        halign = "left",
+        valign = "top",
+        classes = {"hidden"},
+        children = {
+            gui.Label{
+                text = "NOTES TAB CONTENT\n(placeholder)",
+                width = "98%",
+                fontSize = 20,
+                color = Styles.textColor,
+                textAlignment = "left",
+                halign = "center",
+                valign = "top"
+            }
+        }
+    }
+
+    local debugPanel = gui.Panel{
+        width = "100%",
+        height = "100%",
+        flow = "vertical",
+        valign = "top",
+        classes = {"hidden"},
+        borderWidth = 3,
+        borderColor = "orange",
+        children = {
+            gui.Label{
+                text = "DEBUG TAB: Panel has valign=top, flow=vertical",
+                fontSize = 16,
+                color = "yellow",
+                bgcolor = "black",
+                textAlignment = "left",
+                width = "100%",
+                height = 30,
+                valign = "top",
+            },
+            gui.Label{
+                text = "Test 1: This should appear at TOP if positioning works",
+                fontSize = 14,
+                color = "cyan",
+                textAlignment = "left",
+                width = "100%",
+                height = 25,
+                valign = "top",
+            },
+            -- gui.Label{
+            --     text = "Test 2: This should appear BELOW Test 1",
+            --     fontSize = 14,
+            --     color = "lime",
+            --     textAlignment = "left",
+            --     width = "100%",
+            --     height = 25
+            -- },
+            -- gui.Label{
+            --     text = "Test 3: If all text appears CENTERED, the ContentPanel is centering us",
+            --     fontSize = 14,
+            --     color = "magenta",
+            --     textAlignment = "left",
+            --     width = "100%",
+            --     height = 25
+            -- },
+            -- gui.Panel{
+            --     width = "100%",
+            --     height = 200,
+            --     borderWidth = 2,
+            --     borderColor = "white",
+            --     children = {
+            --         gui.Label{
+            --             text = "NESTED PANEL: Should be at top of white border",
+            --             fontSize = 12,
+            --             color = "orange",
+            --             textAlignment = "left",
+            --             width = "100%",
+            --             height = 20,
+            --             valign = "top"
+            --         }
+            --     }
+            -- }
+        }
+    }
+
+    local tabPanels = {questPanel, objectivesPanel, notesPanel, debugPanel}
+
+    -- Content panel that holds all tab panels
+    local contentPanel = gui.Panel{
+        width = "100%",
+        height = "100%",
         flow = "none",
+        valign = "top",
+        borderWidth = 5,
+        borderColor = "red",
         children = tabPanels,
 
         showTab = function(element, tabIndex)
@@ -179,176 +250,97 @@ function QTQuestManagerWindow:_createWindow()
                 if p ~= nil then
                     local hidden = (tabIndex ~= i)
                     p:SetClass("hidden", hidden)
-                    p:FireEventTree("questWindowActivate", not hidden)
                 end
             end
         end,
     }
 
-    -- Tab selection function
+    -- Declare tabsPanel variable first
     local tabsPanel
-    local SelectTab = function(id)
-        local index = nil
-        for i, tabOption in ipairs(QTQuestManagerWindow.TabOptions) do
-            if tabOption.id == id then
-                index = i
-            end
-        end
 
-        if index ~= nil then
-            contentPanel:FireEventTree("showTab", index, id)
-        end
-        selectedTab = id
+    -- Tab selection function
+    local selectTab = function(tabName)
+        selectedTab = tabName
+        local index = tabName == "Quest" and 1 or tabName == "Objectives" and 2 or tabName == "Notes" and 3 or 4
 
-        for i, tab in ipairs(tabsPanel.children) do
-            if tab:HasClass("questTab") then
-                tab:SetClass("selected", tab.data.info.id == id)
+        -- Hide/show tab content
+        contentPanel:FireEventTree("showTab", index)
+
+        -- Update tab appearance
+        for _, tab in ipairs(tabsPanel.children) do
+            if tab.data and tab.data.tabName then
+                tab:SetClass("selected", tab.data.tabName == tabName)
             end
         end
     end
 
     -- Create tabs panel
     tabsPanel = gui.Panel{
-        id = "questManagerTabs",
         classes = {"questTabContainer"},
-        styles = {
-            QTQuestManagerWindow.TabsStyles,
-        },
-
-        init = function(element)
-            local children = {}
-            for _, tabOption in ipairs(QTQuestManagerWindow.TabOptions) do
-                children[#children + 1] = gui.Label{
-                    classes = {"questTab", selectedTab == tabOption.id and "selected" or nil},
-                    text = tabOption.text,
-                    press = function(element)
-                        SelectTab(tabOption.id)
-                    end,
-                    data = {
-                        info = tabOption,
-                    },
-                    gui.Panel{classes = {"questTabBorder"}},
-                }
-            end
-            element.children = children
-        end,
+        styles = {QTQuestManagerWindow.TabsStyles},
+        children = {
+            gui.Label{
+                classes = {"questTab", "selected"},
+                text = "Quest",
+                data = {tabName = "Quest"},
+                press = function() selectTab("Quest") end,
+                gui.Panel{classes = {"questTabBorder"}},
+            },
+            gui.Label{
+                classes = {"questTab"},
+                text = "Objectives",
+                data = {tabName = "Objectives"},
+                press = function() selectTab("Objectives") end,
+                gui.Panel{classes = {"questTabBorder"}},
+            },
+            gui.Label{
+                classes = {"questTab"},
+                text = "Notes",
+                data = {tabName = "Notes"},
+                press = function() selectTab("Notes") end,
+                gui.Panel{classes = {"questTabBorder"}},
+            },
+            gui.Label{
+                classes = {"questTab"},
+                text = "Debug",
+                data = {tabName = "Debug"},
+                press = function() selectTab("Debug") end,
+                gui.Panel{classes = {"questTabBorder"}},
+            }
+        }
     }
 
-    tabsPanel:FireEvent("init")
-
-    -- Main window panel
-    local windowPanel = gui.Panel{
+    return gui.Panel{
         id = "questManagerWindow",
-        classes = {"questManagerHarness", dmhub.GetSettingValue("quest:windowed") and "windowed" or nil},
-
+        width = 1200,
+        height = 800,
+        halign = "center",
+        valign = "center",
         borderWidth = 2,
         borderColor = Styles.textColor,
         bgimage = "panels/square.png",
-        bgcolor = "#111111ff", -- Completely opaque background
-        opacity = 1.0, -- Ensure full opacity
-
+        bgcolor = "#111111ff",
+        opacity = 1.0,
+        flow = "vertical",
         styles = {
             Styles.Default,
             Styles.Panel,
-            {
-                selectors = {"questManagerHarness"},
-                width = windowWidth,
-                height = windowHeight,
-                halign = "center",
-                valign = "center",
-                flow = "vertical",
-            },
-            {
-                selectors = {"questManagerHarness", "windowed"},
-                transitionTime = 0.2,
-                scale = 0.6,
-            },
+            QTQuestManagerWindow.TabsStyles
         },
-
-        flow = "vertical",
-        width = windowWidth,
-        height = windowHeight,
-        halign = "center",
-        valign = "center",
-
-        data = {},
-
-        closeQuestManager = function(element)
-            questManagerWindow.isOpen = false
-            element:DestroySelf()
-        end,
-
-        escape = function(element)
-            for _, p in ipairs(tabPanels) do
-                if p then
-                    p:FireEventTree("questWindowActivate", false)
-                end
-            end
-            element:FireEvent("closeQuestManager")
-        end,
-
-        show = function(element)
-            SelectTab(QTQuestManagerWindow.defaultTab)
-            element:SetClass("collapsed", false)
-        end,
-
         children = {
-            -- Main content area
+            -- Main content area (full height, no footer)
             gui.Panel{
                 width = "100%",
-                height = "100%-60", -- Leave space for footer
-                halign = "center",
-                valign = "center",
+                height = "100%",
                 flow = "vertical",
                 children = {
                     tabsPanel,
-                    contentPanel,
+                    contentPanel
                 }
             },
 
-            -- Footer with Confirm/Cancel buttons
-            gui.Panel{
-                width = "100%",
-                height = 60,
-                flow = "none",
-                classes = {"dialog-header"},
-                borderColor = Styles.textColor,
-                border = { y1 = 2 },
-                children = {
-                    gui.Panel{
-                        width = "auto",
-                        height = 50,
-                        halign = "center",
-                        valign = "center",
-                        flow = "horizontal",
-                        children = {
-                            gui.Button{
-                                text = "Confirm",
-                                width = 120,
-                                height = 40,
-                                hmargin = 40,
-                                classes = {"QTButton", "QTBase"},
-                                click = function(element)
-                                    element:Get("questManagerWindow"):FireEventTree("saveQuest")
-                                end
-                            },
-                            gui.Button{
-                                text = "Cancel",
-                                width = 120,
-                                height = 40,
-                                hmargin = 40,
-                                classes = {"QTButton", "QTBase"},
-                                escapeActivates = true,
-                                click = function(element)
-                                    element:Get("questManagerWindow"):FireEvent("escape")
-                                end
-                            }
-                        }
-                    }
-                }
-            },
 
-            -- Window controls (resize and close buttons)
+            -- X Close button (top right)
             gui.Panel{
                 flow = "horizontal",
                 floating = true,
@@ -357,37 +349,18 @@ function QTQuestManagerWindow:_createWindow()
                 halign = "right",
                 valign = "top",
                 children = {
-                    -- Resize button (windowed mode toggle)
-                    gui.Panel{
-                        classes = {"iconButton"},
-                        bgimage = "panels/square.png",
-                        bgcolor = "black",
-                        valign = "center",
-                        borderColor = Styles.textColor,
-                        borderWidth = 4,
-                        width = 24,
-                        height = 24,
-                        click = function(element)
-                            dmhub.SetSettingValue("quest:windowed", not dmhub.GetSettingValue("quest:windowed"))
-                            element:Get("questManagerWindow"):SetClass("windowed", dmhub.GetSettingValue("quest:windowed"))
-                        end,
-                    },
-
-                    -- Close button
                     gui.CloseButton{
                         width = 32,
                         height = 32,
                         valign = "center",
                         click = function(element)
-                            element:Get("questManagerWindow"):FireEvent("escape")
+                            closeWindow()
                         end,
-                    },
+                    }
                 }
             }
         }
     }
-
-    return windowPanel
 end
 
 -- Register default tabs
@@ -448,48 +421,92 @@ end
 --- @param quest QTQuest The quest object to display/edit
 --- @return table panel The objectives panel
 function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
-    local questName = quest:GetTitle() or "New Quest"
+    local function buildObjectivesList()
+        local objectives = quest:GetObjectives()
+        local objectiveChildren = {}
+
+        if #objectives == 0 then
+            objectiveChildren[#objectiveChildren + 1] = gui.Label {
+                text = "No objectives yet. Click 'Add Objective' to create the first objective!",
+                width = "100%",
+                height = "100%",
+                halign = "center",
+                valign = "center",
+                textAlignment = "center",
+                classes = {"QTLabel", "QTBase"},
+                bold = false
+            }
+        else
+            for i, objective in ipairs(objectives) do
+                -- Add divider before objective (except first one)
+                if i > 1 then
+                    objectiveChildren[#objectiveChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
+                end
+
+                -- Objective item
+                objectiveChildren[#objectiveChildren + 1] = QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
+            end
+        end
+
+        return objectiveChildren
+    end
 
     return gui.Panel{
         id = "objectivesPanel",
-        width = "100%",
-        height = "100%",
+        width = "100%-6",
+        height = "90%",
         flow = "vertical",
+        valign = "top",
         hpad = 20,
         vpad = 20,
-        styles = {
-            gui.Style{
-                selectors = {"#objectivesPanel"},
-                bgcolor = "#ff1111ff",
-                borderWidth = 2,
-                borderColor = Styles.textColor,
-                opacity = 1.0,
-            }
-        },
+        borderWidth = 5,
+        borderColor = "blue",
+        styles = QTQuestManagerWindow._getDialogStyles(),
+        monitorGame = questManager:GetDocumentPath(),
+        refreshGame = function(element)
+            -- Rebuild objectives list when document changes
+            local objectivesScrollArea = element:Get("objectivesScrollArea")
+            if objectivesScrollArea then
+                objectivesScrollArea.children = buildObjectivesList()
+            end
+        end,
         children = {
-            gui.Label{
-                text = "Objectives for: " .. questName,
+            -- Scrollable objectives area
+            gui.Panel{
                 width = "100%",
-                height = "auto",
-                halign = "left",
+                height = "100%-60",
                 valign = "top",
-                textAlignment = "left",
-                fontSize = 24,
-                color = Styles.textColor,
-                bold = true,
-                vmargin = 10
+                vscroll = true,
+                children = {
+                    gui.Panel{
+                        id = "objectivesScrollArea",
+                        width = "100%",
+                        height = "auto",
+                        flow = "vertical",
+                        valign = "top",
+                        children = {
+                            table.unpack(buildObjectivesList())
+                        }
+                    },
+                }
             },
-            gui.Label{
-                text = "Objective management features will be implemented here. This tab will contain quest objectives, their completion status, and related functionality.",
-                width = "100%",
-                height = "auto",
-                halign = "left",
-                valign = "top",
-                textAlignment = "left",
-                color = Styles.textColor,
-                fontSize = 16,
-                textWrap = true,
-                vmargin = 10
+
+            -- Add objective button
+            gui.AddButton {
+                halign = "right",
+                vmargin = 5,
+                hmargin = 40,
+                linger = function(element)
+                    gui.Tooltip("Add a new objective")(element)
+                end,
+                click = function(element)
+                    -- Add new empty objective directly (character sheet pattern)
+                    quest:AddObjective("")
+                    -- Refresh to show the new objective
+                    if QTQuestManagerWindow.instance then
+                        QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                    end
+                end
             }
         }
     }
@@ -500,51 +517,567 @@ end
 --- @param quest QTQuest The quest object to display/edit
 --- @return table panel The notes panel
 function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
-    local questName = quest:GetTitle() or "New Quest"
+    local function buildNotesList()
+        local notes = quest:GetNotes()
+        local noteChildren = {}
+
+        if #notes == 0 then
+            noteChildren[#noteChildren + 1] = gui.Label {
+                text = "No notes yet. Click 'Add Note' to create the first note.",
+                width = "100%",
+                height = "100%",
+                halign = "center",
+                valign = "center",
+                textAlignment = "center",
+                classes = {"QTLabel", "QTBase"},
+                bold = false
+            }
+        else
+            for i, note in ipairs(notes) do
+                -- Add divider before note (except first one)
+                if i > 1 then
+                    noteChildren[#noteChildren + 1] = gui.Divider { width = "90%" }
+                end
+
+                -- Note item
+                noteChildren[#noteChildren + 1] = QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+            end
+        end
+
+        return noteChildren
+    end
 
     return gui.Panel{
         id = "notesPanel",
-        width = "100%",
+        width = "98%",
         height = "100%",
         flow = "vertical",
         hpad = 20,
         vpad = 20,
-        styles = {
-            gui.Style{
-                selectors = {"#notesPanel"},
-                bgcolor = "#111111ff",
-                borderWidth = 2,
-                borderColor = Styles.textColor,
-                opacity = 1.0,
-            }
-        },
+        styles = QTQuestManagerWindow._getDialogStyles(),
+        monitorGame = questManager:GetDocumentPath(),
+        refreshGame = function(element)
+            -- Rebuild notes list when document changes
+            local notesScrollArea = element:Get("notesScrollArea")
+            if notesScrollArea then
+                notesScrollArea.children = buildNotesList()
+            end
+        end,
         children = {
-            gui.Label{
-                text = "Notes for: " .. questName,
+            -- Scrollable notes area
+            gui.Panel{
+                id = "notesScrollArea",
                 width = "100%",
-                height = "auto",
-                halign = "left",
+                height = "90%",
+                flow = "vertical",
+                vscroll = true,
                 valign = "top",
-                textAlignment = "left",
-                fontSize = 24,
-                color = Styles.textColor,
-                bold = true,
-                vmargin = 10
+                children = buildNotesList()
             },
-            gui.Label{
-                text = "Quest notes management features will be implemented here. This tab will contain player notes, director notes, and related quest documentation.",
-                width = "100%",
-                height = "auto",
-                halign = "left",
-                valign = "top",
-                textAlignment = "left",
-                color = Styles.textColor,
-                fontSize = 16,
-                textWrap = true,
-                vmargin = 10
+
+            -- Add note button (always visible at bottom)
+            gui.AddButton {
+                halign = "right",
+                vmargin = 5,
+                hmargin = 100,
+                linger = function(element)
+                    gui.Tooltip("Add a new note")(element)
+                end,
+                click = function(element)
+                    QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+                end
             }
         }
     }
+end
+
+--- Creates a single note item display
+--- @param questManager QTQuestManager The quest manager instance
+--- @param quest QTQuest The quest object
+--- @param note QTQuestNote The note to display
+--- @return table panel The note item panel
+function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+    local content = note:GetContent() or ""
+    local authorId = note:GetAuthorId() or "Unknown"
+    local timestamp = note:GetTimestamp() or ""
+
+    -- Format timestamp for display
+    local displayTimestamp = timestamp
+    if timestamp and timestamp ~= "" then
+        -- Simple format: just show date and time
+        displayTimestamp = timestamp:gsub("T", " "):gsub("Z", ""):gsub("%-", "/")
+    end
+
+    -- Build delete button if user has permission
+    local headerChildren = {
+        gui.Label {
+            text = "By: " .. authorId .. " at " .. displayTimestamp,
+            width = "85%",
+            height = 20,
+            classes = {"QTLabel", "QTBase"},
+            textAlignment = "left"
+        }
+    }
+
+    -- Add delete button for author or DM
+    if dmhub.isDM or note:GetAuthorId() == dmhub.userid then
+        headerChildren[#headerChildren + 1] = gui.DeleteItemButton {
+            width = 20,
+            height = 20,
+            halign = "right",
+            valign = "center",
+            click = function()
+                local displayText = "Are you sure you want to delete this note?"
+                local onConfirm = function()
+                    quest:RemoveNote(note.id)
+                end
+                -- We'd need to expose the confirmation dialog somehow
+                -- For now, let's create a simple confirmation
+                QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, note.id)
+            end
+        }
+    end
+
+    return gui.Panel {
+        width = "90%",
+        height = "auto",
+        flow = "vertical",
+        vmargin = 5,
+        children = {
+            -- Header with author, timestamp, and delete button
+            gui.Panel {
+                width = "100%",
+                height = 25,
+                flow = "horizontal",
+                children = headerChildren
+            },
+            -- Note content
+            gui.Label {
+                text = content,
+                width = "100%",
+                height = "auto",
+                classes = {"QTLabel", "QTBase"},
+                textAlignment = "left",
+                textWrap = true,
+                vmargin = 5,
+                bold = false
+            }
+        }
+    }
+end
+
+--- Creates a single objective item with in-place editing
+--- @param questManager QTQuestManager The quest manager instance
+--- @param quest QTQuest The quest object
+--- @param objective QTQuestObjective The objective to display
+--- @return table panel The objective item panel
+function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
+    local title = objective:GetTitle() or ""
+    local status = objective:GetStatus() or QTQuestObjective.STATUS.NOT_STARTED
+    local description = objective:GetDescription() or ""
+
+    -- Status display formatting
+    local statusText = status:gsub("_", " "):gsub("(%l)(%w*)", function(a, b)
+        return string.upper(a) .. b
+    end)
+
+    -- Status options for dropdown (using same pattern as main quest tab)
+    local statusOptions = {
+        {id = QTQuestObjective.STATUS.NOT_STARTED, text = "Not Started"},
+        {id = QTQuestObjective.STATUS.ACTIVE, text = "Active"},
+        {id = QTQuestObjective.STATUS.COMPLETED, text = "Completed"},
+        {id = QTQuestObjective.STATUS.FAILED, text = "Failed"},
+        {id = QTQuestObjective.STATUS.ON_HOLD, text = "On Hold"}
+    }
+
+    -- Delete button (only for DM or objective creator - for now, allow DM to delete any)
+    local deleteButton = nil
+    if dmhub.isDM then
+        deleteButton = gui.DeleteItemButton {
+            width = 20,
+            height = 20,
+            halign = "right",
+            valign = "top",
+            hmargin = 5,
+            vmargin = 5,
+            click = function()
+                local questWindow = QTQuestManagerWindow.instance.windowElement
+                QTQuestManagerWindow.ShowDeleteObjectiveConfirmation(quest, objective.id, title, questWindow)
+            end
+        }
+    end
+
+    return gui.Panel {
+        width = "100%",
+        height = "auto",
+        flow = "vertical",
+        valign = "top",
+        vmargin = 5,
+        classes = {"objective-item", "status-" .. status},
+        children = {
+            -- Header with title, status, and delete button
+            gui.Panel {
+                width = "100%",
+                height = 30,
+                vmargin = 15,
+                flow = "horizontal",
+                valign = "top",
+                children = {
+                    -- Title input (in-place editing)
+                    gui.Input {
+                        width = "50%",
+                        height = 25,
+                        classes = {"QTInput", "QTBase"},
+                        text = title,
+                        placeholderText = "Enter objective title...",
+                        editlag = 0.25,
+                        edit = function(element)
+                            if objective:GetTitle() ~= element.text then
+                                objective:SetTitle(element.text)
+                                -- Update quest modified timestamp
+                                quest:UpdateProperties({}, "Updated objective title")
+                            end
+                        end
+                    },
+
+                    -- Status dropdown (in-place editing)
+                    gui.Dropdown {
+                        width = "40%",
+                        height = 25,
+                        hmargin = 10,
+                        classes = {"QTDropdown", "QTBase"},
+                        options = statusOptions,
+                        idChosen = status,
+                        change = function(element)
+                            local newStatus = element.idChosen
+                            if objective:GetStatus() ~= newStatus then
+                                objective:SetStatus(newStatus)
+                                -- Update quest modified timestamp
+                                quest:UpdateProperties({}, "Updated objective status")
+                                -- Refresh to update styling
+                                if QTQuestManagerWindow.instance then
+                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                end
+                            end
+                        end
+                    },
+
+                    -- Delete button (if allowed)
+                    deleteButton
+                }
+            },
+
+            -- Description text area (in-place editing)
+            gui.Input {
+                width = "96%",
+                height = 80,
+                classes = {"QTInput", "QTBase"},
+                text = description,
+                placeholderText = "Enter objective description...",
+                lineType = "MultiLine",
+                textAlignment = "topleft",
+                editlag = 0.25,
+                vmargin = 5,
+                edit = function(element)
+                    if objective:GetDescription() ~= element.text then
+                        objective:SetDescription(element.text)
+                        -- Update quest modified timestamp
+                        quest:UpdateProperties({}, "Updated objective description")
+                    end
+                end
+            }
+        }
+    }
+end
+
+--- Shows the add note dialog
+--- @param questManager QTQuestManager The quest manager instance
+--- @param quest QTQuest The quest object
+function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+    local noteContent = ""
+
+    local addNoteWindow = gui.Panel{
+        id = "addNoteModal",
+        width = 500,
+        height = 300,
+        halign = "center",
+        valign = "center",
+        bgcolor = "#111111ff",
+        borderWidth = 2,
+        borderColor = Styles.textColor,
+        bgimage = "panels/square.png",
+        flow = "vertical",
+        hpad = 20,
+        vpad = 20,
+        styles = QTQuestManagerWindow._getDialogStyles(),
+
+        children = {
+            -- Title
+            gui.Label{
+                text = "Add Note",
+                width = "100%",
+                height = 30,
+                classes = {"QTLabel", "QTBase"},
+                textAlignment = "center",
+                halign = "center"
+            },
+
+            -- Note content input (using a large input field as text area)
+            gui.Input{
+
+                -- width = "100%",
+                -- height = 70,
+                -- classes = {"QTInput", "QTBase"},
+                -- text = quest:GetDescription() or "",
+                -- placeholderText = "Enter quest description...",
+                -- lineType = "MultiLine",
+                -- textAlignment = "topleft"
+
+                id = "noteContentInput",
+                width = "95%",
+                height = 150,
+                classes = {"QTInput", "QTBase"},
+                textAlignment = "topleft",
+                placeholderText = "Enter your note here...",
+                lineType = "MultiLine",
+                vmargin = 5,
+                change = function(element)
+                    noteContent = element.text or ""
+                end
+            },
+
+            -- Button panel (matching main window structure)
+            gui.Panel{
+                width = "auto",
+                height = 50,
+                halign = "center",
+                valign = "center",
+                flow = "horizontal",
+                children = {
+                    -- Confirm button
+                    gui.Button{
+                        text = "Confirm",
+                        width = 120,
+                        height = 40,
+                        hmargin = 40,
+                        classes = {"QTButton", "QTBase"},
+                        click = function(element)
+                            if noteContent and noteContent:trim() ~= "" then
+                                quest:AddNote(noteContent, dmhub.userid)
+                                -- Use FireEvent refreshAll pattern like character sheet
+                                if QTQuestManagerWindow.instance then
+                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                end
+                            end
+                            element:Get("addNoteModal"):DestroySelf()
+                        end
+                    },
+                    -- Cancel button
+                    gui.Button{
+                        text = "Cancel",
+                        width = 120,
+                        height = 40,
+                        hmargin = 40,
+                        classes = {"QTButton", "QTBase"},
+                        escapeActivates = true,
+                        click = function(element)
+                            element:Get("addNoteModal"):DestroySelf()
+                        end
+                    }
+                }
+            }
+        },
+
+        -- ESC key support
+        escape = function(element)
+            element:DestroySelf()
+        end
+    }
+
+    -- Add to main dialog panel
+    if gamehud and gamehud.mainDialogPanel then
+        gamehud.mainDialogPanel:AddChild(addNoteWindow)
+    end
+end
+
+--- Shows confirmation dialog for deleting a note
+--- @param quest QTQuest The quest object
+--- @param noteId string The note ID to delete
+function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
+    local displayText = "Are you sure you want to delete this note?"
+    local onConfirm = function()
+        quest:RemoveNote(noteId)
+        -- Use FireEvent refreshAll pattern like character sheet
+        if QTQuestManagerWindow.instance then
+            QTQuestManagerWindow.instance:FireEvent("refreshAll")
+        end
+    end
+
+    -- Create a simple confirmation dialog
+    local confirmationWindow = gui.Panel{
+        id = "deleteNoteModal",
+        width = 400,
+        height = 150,
+        halign = "center",
+        valign = "center",
+        floating = "true",
+        bgcolor = "#111111ff",
+        borderWidth = 2,
+        borderColor = Styles.textColor,
+        bgimage = "panels/square.png",
+        flow = "vertical",
+        hpad = 20,
+        vpad = 20,
+
+        children = {
+            gui.Label{
+                text = displayText,
+                width = "100%",
+                height = 60,
+                fontSize = 14,
+                color = Styles.textColor,
+                textAlignment = "center",
+                textWrap = true,
+                halign = "center",
+                vmargin =50
+            },
+
+            gui.Panel{
+                width = "100%",
+                height = 40,
+                flow = "horizontal",
+                halign = "center",
+                valign = "center",
+                children = {
+                    gui.Button{
+                        text = "Delete",
+                        width = 80,
+                        height = 30,
+                        hmargin = 10,
+                        fontSize = 14,
+                        bgcolor = "#cc0000",
+                        color = "white",
+                        bold = true,
+                        click = function(element)
+                            onConfirm()
+                            element:Get("deleteNoteModal"):DestroySelf()
+                        end
+                    },
+                    gui.Button{
+                        text = "Cancel",
+                        width = 80,
+                        height = 30,
+                        hmargin = 10,
+                        fontSize = 14,
+                        color = Styles.textColor,
+                        click = function(element)
+                            element:Get("deleteNoteModal"):DestroySelf()
+                        end
+                    }
+                }
+            }
+        },
+
+        escape = function(element)
+            element:DestroySelf()
+        end
+    }
+
+    if gamehud and gamehud.mainDialogPanel then
+        gamehud.mainDialogPanel:AddChild(confirmationWindow)
+    end
+end
+
+
+--- Shows confirmation dialog for deleting an objective
+--- @param quest QTQuest The quest object
+--- @param objectiveId string The objective ID to delete
+--- @param objectiveTitle string The objective title for display
+function QTQuestManagerWindow.ShowDeleteObjectiveConfirmation(quest, objectiveId, objectiveTitle, parentWindow)
+    local displayText = "Are you sure you want to delete objective \"" .. (objectiveTitle or "Untitled") .. "\"?"
+
+    local confirmationWindow = gui.Panel{
+        width = 400,
+        height = 200,
+        halign = "center",
+        valign = "center",
+        bgcolor = "#111111ff",
+        borderWidth = 2,
+        borderColor = Styles.textColor,
+        bgimage = "panels/square.png",
+        flow = "vertical",
+        hpad = 20,
+        vpad = 20,
+        styles = QTQuestManagerWindow._getDialogStyles(),
+
+        children = {
+            -- Header
+            gui.Label{
+                text = "Delete Confirmation",
+                width = "100%",
+                height = 30,
+                fontSize = 30,
+                classes = {"QTLabel", "QTBase"},
+                textAlignment = "center",
+                halign = "center"
+            },
+
+            -- Confirmation message
+            gui.Label{
+                text = displayText,
+                width = "100%",
+                height = 80,
+                classes = {"QTLabel", "QTBase"},
+                textAlignment = "center",
+                textWrap = true,
+                halign = "center",
+                valign = "center"
+            },
+
+            -- Button panel
+            gui.Panel{
+                width = "100%",
+                height = 40,
+                flow = "horizontal",
+                halign = "center",
+                valign = "center",
+                children = {
+                    -- Cancel button (first)
+                    gui.Button{
+                        text = "Cancel",
+                        width = 120,
+                        height = 40,
+                        hmargin = 10,
+                        classes = {"QTButton", "QTBase"},
+                        click = function(element)
+                            gui.CloseModal()
+                        end
+                    },
+                    -- Delete button (second)
+                    gui.Button{
+                        text = "Delete",
+                        width = 120,
+                        height = 40,
+                        hmargin = 10,
+                        classes = {"QTButton", "QTBase"},
+                        click = function(element)
+                            quest:RemoveObjective(objectiveId)
+                            if QTQuestManagerWindow.instance then
+                                QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                            end
+                            gui.CloseModal()
+                        end
+                    }
+                }
+            }
+        },
+
+        escape = function(element)
+            gui.CloseModal()
+        end
+    }
+
+    gui.ShowModal(confirmationWindow)
 end
 
 --- Builds the quest form for the Quest tab
@@ -559,17 +1092,29 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         classes = {"QTInput", "QTBase"},
         text = quest:GetTitle() or "New Quest",
         placeholderText = "Enter quest title...",
-        lineType = "Single"
+        lineType = "Single",
+        editlag = 0.25,
+        edit = function(element)
+            if quest:GetTitle() ~= element.text then
+                quest:SetTitle(element.text)
+            end
+        end
     }
 
     local descriptionField = gui.Input{
         width = "100%",
-        height = 70,
+        height = 100,
         classes = {"QTInput", "QTBase"},
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
         lineType = "MultiLine",
-        textAlignment = "topleft"
+        textAlignment = "topleft",
+        editlag = 0.25,
+        edit = function(element)
+            if quest:GetDescription() ~= element.text then
+                quest:SetDescription(element.text)
+            end
+        end
     }
 
     local questGiverField = gui.Input{
@@ -577,7 +1122,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         classes = {"QTInput", "QTBase"},
         text = quest:GetQuestGiver() or "",
         placeholderText = "Who gave this quest?",
-        lineType = "Single"
+        lineType = "Single",
+        editlag = 0.25,
+        edit = function(element)
+            if quest:GetQuestGiver() ~= element.text then
+                quest:SetQuestGiver(element.text)
+            end
+        end
     }
 
     local locationField = gui.Input{
@@ -585,7 +1136,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         classes = {"QTInput", "QTBase"},
         text = quest:GetLocation() or "",
         placeholderText = "Where does this quest take place?",
-        lineType = "Single"
+        lineType = "Single",
+        editlag = 0.25,
+        edit = function(element)
+            if quest:GetLocation() ~= element.text then
+                quest:SetLocation(element.text)
+            end
+        end
     }
 
     local rewardsField = gui.Input{
@@ -593,7 +1150,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         classes = {"QTInput", "QTBase"},
         text = quest:GetRewards() or "",
         placeholderText = "What rewards does this quest offer?",
-        lineType = "Single"
+        lineType = "Single",
+        editlag = 0.25,
+        edit = function(element)
+            if quest:GetRewards() ~= element.text then
+                quest:SetRewards(element.text)
+            end
+        end
     }
 
     -- Category options
@@ -627,7 +1190,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         halign = "left",
         classes = {"QTDropdown", "QTBase"},
         options = categoryOptions,
-        idChosen = quest:GetCategory() or QTQuest.CATEGORY.MAIN
+        idChosen = quest:GetCategory() or QTQuest.CATEGORY.MAIN,
+        change = function(element)
+            local newCategory = element.idChosen
+            if quest:GetCategory() ~= newCategory then
+                quest:SetCategory(newCategory)
+            end
+        end
     }
 
     local priorityDropdown = gui.Dropdown{
@@ -635,7 +1204,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         halign = "left",
         classes = {"QTDropdown", "QTBase"},
         options = priorityOptions,
-        idChosen = quest:GetPriority() or QTQuest.PRIORITY.MEDIUM
+        idChosen = quest:GetPriority() or QTQuest.PRIORITY.MEDIUM,
+        change = function(element)
+            local newPriority = element.idChosen
+            if quest:GetPriority() ~= newPriority then
+                quest:SetPriority(newPriority)
+            end
+        end
     }
 
     local statusDropdown = gui.Dropdown{
@@ -643,7 +1218,13 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         halign = "left",
         classes = {"QTDropdown", "QTBase"},
         options = statusOptions,
-        idChosen = quest:GetStatus() or QTQuest.STATUS.NOT_STARTED
+        idChosen = quest:GetStatus() or QTQuest.STATUS.NOT_STARTED,
+        change = function(element)
+            local newStatus = element.idChosen
+            if quest:GetStatus() ~= newStatus then
+                quest:SetStatus(newStatus)
+            end
+        end
     }
 
     local rewardsClaimedCheckbox = gui.Check{
@@ -652,7 +1233,12 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         halign = "left",
         valign = "center",
         classes = {"QTCheck", "QTBase"},
-        value = quest:GetRewardsClaimed() or false
+        value = quest:GetRewardsClaimed() or false,
+        change = function(element)
+            if quest:GetRewardsClaimed() ~= element.value then
+                quest:SetRewardsClaimed(element.value)
+            end
+        end
     }
 
     local visibleToPlayersCheckbox = gui.Check{
@@ -661,104 +1247,31 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         halign = "left",
         valign = "center",
         classes = {"QTCheck", "QTBase"},
-        value = quest:GetVisibleToPlayers() or (not dmhub.isDM)
+        value = quest:GetVisibleToPlayers() or (not dmhub.isDM),
+        change = function(element)
+            if quest:GetVisibleToPlayers() ~= element.value then
+                quest:SetVisibleToPlayers(element.value)
+            end
+        end
     }
 
-    -- Helper function to format timestamp
-    local function formatTimestamp(isoTimestamp)
-        if not isoTimestamp or isoTimestamp == "" then
-            return "Not yet created"
-        end
-        return isoTimestamp
-    end
-
-    -- Timestamp fields (readonly)
-    -- local createdTimestampLabel = gui.Label{
-    --     width = "100%",
-    --     height = 30,
-    --     classes = {"field-readonly"},
-    --     text = formatTimestamp(quest:GetCreatedTimestamp()) or "Not yet created",
-    --     textAlignment = "left"
-    -- }
-
-    -- local modifiedTimestampLabel = gui.Label{
-    --     width = "100%",
-    --     height = 30,
-    --     classes = {"field-readonly"},
-    --     text = formatTimestamp(quest:GetModifiedTimestamp()) or "Not yet created",
-    --     textAlignment = "left"
-    -- }
-
-    -- Save quest function
-    local saveQuest = function()
-        local title = titleField and titleField.text or "New Quest"
-        local description = descriptionField and descriptionField.text or ""
-        local category = categoryDropdown and categoryDropdown.idChosen or QTQuest.CATEGORY.MAIN
-        local priority = priorityDropdown and priorityDropdown.idChosen or QTQuest.PRIORITY.MEDIUM
-        local status = statusDropdown and statusDropdown.idChosen or QTQuest.STATUS.NOT_STARTED
-        local questGiver = questGiverField and questGiverField.text or ""
-        local location = locationField and locationField.text or ""
-        local rewards = rewardsField and rewardsField.text or ""
-        local rewardsClaimed = rewardsClaimedCheckbox and rewardsClaimedCheckbox.value or false
-        local visibleToPlayers = visibleToPlayersCheckbox and visibleToPlayersCheckbox.value or true
-
-        -- Update quest properties
-        quest.title = title
-        quest.description = description
-        quest.category = category
-        quest.priority = priority
-        quest.status = status
-        quest.questGiver = questGiver
-        quest.location = location
-        quest.rewards = rewards
-        quest.rewardsClaimed = rewardsClaimed
-        quest.visibleToPlayers = visibleToPlayers
-
-        -- Save the quest (handles both draft and existing quests)
-        if quest.id then
-            -- Existing quest - update it
-            quest:UpdateProperties({
-                title = title,
-                description = description,
-                category = category,
-                priority = priority,
-                status = status,
-                questGiver = questGiver,
-                location = location,
-                rewards = rewards,
-                rewardsClaimed = rewardsClaimed,
-                visibleToPlayers = visibleToPlayers
-            }, "Quest updated")
-        else
-            -- Draft quest - save it for the first time
-            questManager:SaveDraftQuest(quest)
-        end
-    end
-
-    -- Modified saveQuest function that closes window after saving
-    local saveQuestAndClose = function(element)
-        saveQuest() -- Call the original save logic
-        element:Get("questManagerWindow"):FireEvent("closeQuestManager")
-    end
 
     -- Build the form layout with simplest possible structure
     return gui.Panel{
         width = "100%",
-        height = "100%",
+        height = "90%",
         flow = "vertical",
-        valign = "center",
+        valign = "top",
         styles = QTQuestManagerWindow._getDialogStyles(),
         hpad = 20,
         vpad = 10,
-
-        saveQuest = saveQuestAndClose, -- Add save function as event handler that closes window
         children = {
             -- Title row
             gui.Panel{
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Label{
                         text = "Quest Title:",
@@ -791,9 +1304,9 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
             -- Description field
             gui.Panel{
                 width = "95%",
-                height = 100,
+                height = 120,
                 flow = "vertical",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Label{
                         text = "Description:",
@@ -810,7 +1323,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "horizontal",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Panel{
                         width = "33%",
@@ -865,7 +1378,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Label{
                         text = "Quest Giver:",
@@ -882,7 +1395,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Label{
                         text = "Location:",
@@ -899,7 +1412,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 width = "95%",
                 height = 60,
                 flow = "vertical",
-                vmargin = 10,
+                vmargin = 5,
                 children = {
                     gui.Label{
                         text = "Rewards:",
@@ -1005,7 +1518,7 @@ function QTQuestManagerWindow._getDialogStyles()
         },
         gui.Style{
             selectors = {"QTButton", "QTBase"},
-            fontSize = 40,
+            fontSize = 22,
             textAlignment = "center",
             bold = true,
             height = 35  -- Override QTBase height for buttons

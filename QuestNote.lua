@@ -53,17 +53,6 @@ function QTQuestNote:SetTimestamp(timestamp)
     self._manager:UpdateNoteField(self.id, "timestamp", timestamp)
 end
 
---- Gets whether this note is visible to players (Director notes only)
---- @return boolean visible True if players can see this note
-function QTQuestNote:GetVisibleToPlayers()
-    return self._manager:GetNoteField(self.id, "visibleToPlayers") or false
-end
-
---- Sets whether this note is visible to players (Director notes only)
---- @param visible boolean True if players should see this note
-function QTQuestNote:SetVisibleToPlayers(visible)
-    self._manager:UpdateNoteField(self.id, "visibleToPlayers", visible)
-end
 
 --- Updates multiple note properties in a single document transaction
 --- @param properties table Key-value pairs of properties to update

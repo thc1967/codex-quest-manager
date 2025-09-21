@@ -26,6 +26,18 @@ function QTQuestObjective:new(manager, objectiveId)
     return instance
 end
 
+--- Gets the title of this objective
+--- @return string title The objective's title
+function QTQuestObjective:GetTitle()
+    return self._manager:GetObjectiveField(self.id, "title") or ""
+end
+
+--- Sets the title of this objective
+--- @param title string The new title for the objective
+function QTQuestObjective:SetTitle(title)
+    self._manager:UpdateObjectiveField(self.id, "title", title)
+end
+
 --- Gets the description text of this objective
 --- @return string description The objective's description
 function QTQuestObjective:GetDescription()
@@ -65,85 +77,51 @@ function QTQuestObjective:GetModifiedTimestamp()
     return self._manager:GetObjectiveField(self.id, "modifiedTimestamp") or ""
 end
 
---- Gets all player notes for this objective
---- @return table notes Array of QTQuestNote instances
-function QTQuestObjective:GetPlayerNotes()
-    local noteIds = self._manager:GetObjectiveField(self.id, "playerNoteIds") or {}
-    local notes = {}
-    for _, noteId in ipairs(noteIds) do
-        table.insert(notes, QTQuestNote:new(self._manager, noteId))
+
+--- Sets default properties for a new objective
+--- @param properties table Optional properties to override defaults
+--- @return table properties The properties with defaults applied
+function QTQuestObjective:_applyDefaults(properties)
+    local defaults = {
+        title = "",
+        description = "",
+        status = QTQuestObjective.STATUS.NOT_STARTED,
+        createdTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }
+
+    -- Merge provided properties with defaults
+    local result = {}
+    for key, value in pairs(defaults) do
+        result[key] = value
     end
-    return notes
-end
-
---- Adds a new player note to this objective
---- @param content string The note content
---- @param authorId string The Codex player ID of the author
---- @return QTQuestNote note The newly created note
-function QTQuestObjective:AddPlayerNote(content, authorId)
-    local note = QTQuestNote:new(self._manager)
-    note:UpdateProperties(
-        {
-            content = content,
-            authorId = authorId,
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            visibleToPlayers = true
-        },
-        "Added player note to objective"
-    )
-
-    self._manager:AddNoteToObjective(self.id, note.id, "player")
-    return note
-end
-
---- Gets all director notes for this objective
---- @return table notes Array of QTQuestNote instances
-function QTQuestObjective:GetDirectorNotes()
-    local noteIds = self._manager:GetObjectiveField(self.id, "directorNoteIds") or {}
-    local notes = {}
-    for _, noteId in ipairs(noteIds) do
-        table.insert(notes, QTQuestNote:new(self._manager, noteId))
+    if properties then
+        for key, value in pairs(properties) do
+            result[key] = value
+        end
     end
-    return notes
-end
 
---- Adds a new director note to this objective
---- @param content string The note content
---- @param authorId string The Codex player ID of the director
---- @param visibleToPlayers boolean Whether players can see this note
---- @return QTQuestNote note The newly created note
-function QTQuestObjective:AddDirectorNote(content, authorId, visibleToPlayers)
-    local note = QTQuestNote:new(self._manager)
-    note:UpdateProperties(
-        {
-            content = content,
-            authorId = authorId,
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            visibleToPlayers = visibleToPlayers or false
-        },
-        "Added director note to objective"
-    )
-
-    self._manager:AddNoteToObjective(self.id, note.id, "director")
-    return note
-end
-
---- Removes a note from this objective
---- @param noteId string The GUID of the note to remove
-function QTQuestObjective:RemoveNote(noteId)
-    self._manager:RemoveNoteFromObjective(self.id, noteId)
+    return result
 end
 
 --- Updates multiple objective properties in a single document transaction
 --- @param properties table Key-value pairs of properties to update
 --- @param changeDescription string Optional description for the change
-function QTQuestObjective:UpdateProperties(properties, changeDescription)
+--- @param applyDefaults boolean Whether to apply defaults for new objectives
+function QTQuestObjective:UpdateProperties(properties, changeDescription, applyDefaults)
+    -- Apply defaults if this is a new objective
+    if applyDefaults then
+        properties = self:_applyDefaults(properties)
+    end
+
     if properties.status and not self:_isValidStatus(properties.status) then
         properties.status = nil -- Remove invalid status
     end
 
-    -- Always update modified timestamp when updating properties
-    properties.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    -- Always update modified timestamp when updating properties (unless already set by defaults)
+    if not applyDefaults then
+        properties.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
 
     self._manager:UpdateObjectiveProperties(self.id, properties, changeDescription)
 end

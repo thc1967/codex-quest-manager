@@ -214,14 +214,10 @@ function QTQuestManager:DeleteQuest(questId)
     end
 
     -- Remove quest notes
-    local playerNoteIds = doc.data.quests[questId].playerNoteIds or {}
-    local directorNoteIds = doc.data.quests[questId].directorNoteIds or {}
+    local noteIds = doc.data.quests[questId].noteIds or {}
 
     if doc.data.notes then
-        for _, noteId in ipairs(playerNoteIds) do
-            doc.data.notes[noteId] = nil
-        end
-        for _, noteId in ipairs(directorNoteIds) do
+        for _, noteId in ipairs(noteIds) do
             doc.data.notes[noteId] = nil
         end
     end
@@ -284,7 +280,9 @@ function QTQuestManager:UpdateQuestField(questId, field, value)
 
     doc:BeginChange()
     doc.data.quests[questId][field] = value
-    doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
     doc:CompleteChange("Update quest " .. field, {undoable = true})
 end
 
@@ -341,7 +339,9 @@ function QTQuestManager:UpdateObjectiveField(objectiveId, field, value)
 
     doc:BeginChange()
     doc.data.objectives[objectiveId][field] = value
-    doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
     doc:CompleteChange("Update objective " .. field, {undoable = true})
 end
 
@@ -398,7 +398,9 @@ function QTQuestManager:UpdateNoteField(noteId, field, value)
 
     doc:BeginChange()
     doc.data.notes[noteId][field] = value
-    doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
     doc:CompleteChange("Update note " .. field, {undoable = true})
 end
 
@@ -496,8 +498,7 @@ end
 --- Adds a note to a quest
 --- @param questId string The GUID of the quest
 --- @param noteId string The GUID of the note to add
---- @param noteType string Either "player" or "director"
-function QTQuestManager:AddNoteToQuest(questId, noteId, noteType)
+function QTQuestManager:AddNoteToQuest(questId, noteId)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
     if not doc.data then
         return
@@ -505,7 +506,7 @@ function QTQuestManager:AddNoteToQuest(questId, noteId, noteType)
 
     doc:BeginChange()
 
-    -- Ensure quest exists and has note lists
+    -- Ensure quest exists and has note list
     if not doc.data.quests then
         doc.data.quests = {}
     end
@@ -513,13 +514,12 @@ function QTQuestManager:AddNoteToQuest(questId, noteId, noteType)
         doc.data.quests[questId] = {}
     end
 
-    local noteListField = noteType == "player" and "playerNoteIds" or "directorNoteIds"
-    if not doc.data.quests[questId][noteListField] then
-        doc.data.quests[questId][noteListField] = {}
+    if not doc.data.quests[questId].noteIds then
+        doc.data.quests[questId].noteIds = {}
     end
 
-    -- Add note ID to appropriate list
-    table.insert(doc.data.quests[questId][noteListField], noteId)
+    -- Add note ID to list
+    table.insert(doc.data.quests[questId].noteIds, noteId)
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
     end
@@ -538,18 +538,12 @@ function QTQuestManager:RemoveNoteFromQuest(questId, noteId)
 
     doc:BeginChange()
 
-    if doc.data.quests and doc.data.quests[questId] then
-        -- Remove from both player and director note lists
-        local noteFields = {"playerNoteIds", "directorNoteIds"}
-        for _, field in ipairs(noteFields) do
-            if doc.data.quests[questId][field] then
-                local noteIds = doc.data.quests[questId][field]
-                for i, id in ipairs(noteIds) do
-                    if id == noteId then
-                        table.remove(noteIds, i)
-                        break
-                    end
-                end
+    if doc.data.quests and doc.data.quests[questId] and doc.data.quests[questId].noteIds then
+        local noteIds = doc.data.quests[questId].noteIds
+        for i, id in ipairs(noteIds) do
+            if id == noteId then
+                table.remove(noteIds, i)
+                break
             end
         end
     end
