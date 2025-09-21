@@ -327,11 +327,6 @@ function QTQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, conten
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
     local isCollapsed = dmhub.GetPref(prefKey) or false
 
-    -- Set initial collapse state
-    if contentPanel then
-        contentPanel:SetClass("collapsed", isCollapsed)
-    end
-
     local triangle = gui.Panel{
         classes = {"category-triangle", isCollapsed and nil or "expanded"},
         styles = triangleStyles,
@@ -366,8 +361,9 @@ end
 
 --- Builds the collapsible content area for a quest category
 --- @param categoryQuests table Array of QTQuest instances for this category
+--- @param categoryId string The category ID to check collapse state
 --- @return table panel The content panel containing quest items
-function QTQuestTrackerPanel:_buildCategoryContent(categoryQuests)
+function QTQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
     local questChildren = {}
 
     -- Add quest items with dividers
@@ -380,11 +376,21 @@ function QTQuestTrackerPanel:_buildCategoryContent(categoryQuests)
         questChildren[#questChildren + 1] = self:_buildQuestItem(quest)
     end
 
+    -- Check collapse state from preferences
+    local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
+    local isCollapsed = dmhub.GetPref(prefKey) or false
+
+    -- Build CSS classes array with conditional collapsed class
+    local classes = {"category-content"}
+    if isCollapsed then
+        -- TODO: Figure this out; might be issue w/ storing in dmhub.GetPref() table.insert(classes, "collapsed")
+    end
+
     return gui.Panel{
         width = "100%",
         height = "auto",
         flow = "vertical",
-        classes = {"category-content"},
+        classes = classes,
         children = questChildren
     }
 end
@@ -397,7 +403,7 @@ function QTQuestTrackerPanel:_buildCategorySection(categoryId, categoryQuests)
     local questCount = #categoryQuests
 
     -- Build content panel first so we can pass it to header for collapse control
-    local contentPanel = self:_buildCategoryContent(categoryQuests)
+    local contentPanel = self:_buildCategoryContent(categoryQuests, categoryId)
 
     -- Build header with reference to content panel
     local headerPanel = self:_buildCategoryHeader(categoryId, questCount, contentPanel)

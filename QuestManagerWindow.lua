@@ -610,6 +610,106 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
     }
 end
 
+--- Handles drag and drop reordering of objectives
+--- @param element table The dragged element
+--- @param target table The drop target element
+local DragObjective = function(element, target)
+    if not element or not target or element == target then
+        return
+    end
+
+    local draggedData = element.data
+    local targetData = target.data
+
+    if not draggedData or not targetData or
+       not draggedData.objective or not targetData.objective or
+       not draggedData.quest or not targetData.quest then
+        return
+    end
+
+    -- Must be same quest
+    if draggedData.quest.id ~= targetData.quest.id then
+        return
+    end
+
+    local quest = draggedData.quest
+    local draggedObjective = draggedData.objective
+    local targetObjective = targetData.objective
+
+    -- Get all objectives sorted by current order
+    local objectives = quest:GetObjectives()
+
+    -- Find indices of dragged and target objectives
+    local draggedIndex, targetIndex
+    for i, obj in ipairs(objectives) do
+        if obj.id == draggedObjective.id then
+            draggedIndex = i
+        end
+        if obj.id == targetObjective.id then
+            targetIndex = i
+        end
+    end
+
+    if not draggedIndex or not targetIndex or draggedIndex == targetIndex then
+        return
+    end
+
+    -- Create new order array
+    local newObjectivesOrder = {}
+
+    -- Build new array with dragged objective inserted before target
+    for i, obj in ipairs(objectives) do
+        if i == targetIndex then
+            -- Insert dragged objective before target
+            table.insert(newObjectivesOrder, draggedObjective)
+        end
+        if i ~= draggedIndex then
+            -- Add all objectives except the dragged one (it's been inserted above)
+            table.insert(newObjectivesOrder, obj)
+        end
+    end
+
+    -- Renumber all objectives with new order
+    for newOrder, objective in ipairs(newObjectivesOrder) do
+        if objective:GetOrder() ~= newOrder then
+            objective:SetOrder(newOrder)
+        end
+    end
+
+    -- Refresh UI to show new order
+    if QTQuestManagerWindow.instance then
+        QTQuestManagerWindow.instance:FireEvent("refreshAll")
+    end
+end
+
+--- Creates a drag handle for an objective that serves as both drag source and drop target
+--- @param quest QTQuest The quest object
+--- @param objective QTQuestObjective The objective this handle belongs to
+--- @return table panel The drag handle panel
+local CreateObjectiveDragHandle = function(quest, objective)
+    return gui.Panel{
+        classes = {"objective-drag-handle"},
+        width = 24,
+        height = 24,
+        halign = "left",
+        valign = "center",
+        hmargin = 4,
+        draggable = true,
+        dragTarget = true,
+        canDragOnto = function(element, target)
+            return target:HasClass("objective-drag-handle")
+        end,
+        drag = DragObjective,
+        data = {
+            objective = objective,
+            quest = quest
+        },
+        linger = function(element)
+            gui.Tooltip("Drag to reorder objectives")(element)
+        end
+    }
+end
+
 --- Creates a single objective item with in-place editing
 --- @param questManager QTQuestManager The quest manager instance
 --- @param quest QTQuest The quest object
@@ -633,6 +733,9 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
         {id = QTQuestObjective.STATUS.FAILED, text = "Failed"},
         {id = QTQuestObjective.STATUS.ON_HOLD, text = "On Hold"}
     }
+
+    -- Drag handle for reordering (always visible)
+    local dragHandle = CreateObjectiveDragHandle(quest, objective)
 
     -- Delete button (only for DM or objective creator - for now, allow DM to delete any)
     local deleteButton = nil
@@ -659,7 +762,7 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
         vmargin = 5,
         classes = {"objective-item", "status-" .. status},
         children = {
-            -- Header with title, status, and delete button
+            -- Header with drag handle, title, status, and delete button
             gui.Panel {
                 width = "100%",
                 height = 30,
@@ -667,6 +770,9 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                 flow = "horizontal",
                 valign = "top",
                 children = {
+                    -- Drag handle (first element)
+                    dragHandle,
+
                     -- Title input (in-place editing)
                     gui.Input {
                         width = "50%",
@@ -678,8 +784,10 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                         edit = function(element)
                             if objective:GetTitle() ~= element.text then
                                 objective:SetTitle(element.text)
-                                -- Update quest modified timestamp
-                                quest:UpdateProperties({}, "Updated objective title")
+                                -- Refresh to update UI state
+                                if QTQuestManagerWindow.instance then
+                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                end
                             end
                         end
                     },
@@ -725,8 +833,10 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                 edit = function(element)
                     if objective:GetDescription() ~= element.text then
                         objective:SetDescription(element.text)
-                        -- Update quest modified timestamp
-                        quest:UpdateProperties({}, "Updated objective description")
+                        -- Refresh to update UI state
+                        if QTQuestManagerWindow.instance then
+                            QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                        end
                     end
                 end
             }
@@ -1452,6 +1562,29 @@ function QTQuestManagerWindow._getDialogStyles()
             textAlignment = "center",
             bold = true,
             height = 35  -- Override QTBase height for buttons
+        },
+
+        -- Objective drag handle styles
+        gui.Style{
+            selectors = {"objective-drag-handle"},
+            width = 24,
+            height = 24,
+            bgcolor = "#444444aa",
+            bgimage = "panels/square.png",
+            transitionTime = 0.2
+        },
+        gui.Style{
+            selectors = {"objective-drag-handle", "hover"},
+            bgcolor = "#666666cc"
+        },
+        gui.Style{
+            selectors = {"objective-drag-handle", "dragging"},
+            bgcolor = "#888888ff",
+            opacity = 0.8
+        },
+        gui.Style{
+            selectors = {"objective-drag-handle", "drag-target"},
+            bgcolor = "#4CAF50aa"
         },
 
         -- Legacy dialog styles (kept for compatibility)
