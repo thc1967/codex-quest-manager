@@ -188,14 +188,37 @@ function QTQuest:GetModifiedTimestamp()
     return self._manager:GetQuestField(self.id, "modifiedTimestamp") or ""
 end
 
---- Gets all objectives for this quest
---- @return table objectives Array of QTQuestObjective instances
+--- Gets the highest order number among all objectives for this quest
+--- @return number maxOrder The highest order number, or 0 if no objectives exist
+function QTQuest:GetMaxObjectiveOrder()
+    local objectiveIds = self._manager:GetQuestField(self.id, "objectiveIds") or {}
+    local maxOrder = 0
+
+    for _, objectiveId in ipairs(objectiveIds) do
+        local objective = QTQuestObjective:new(self._manager, objectiveId)
+        local order = objective:GetOrder()
+        if order > maxOrder then
+            maxOrder = order
+        end
+    end
+
+    return maxOrder
+end
+
+--- Gets all objectives for this quest sorted by order (lowest to highest)
+--- @return table objectives Array of QTQuestObjective instances sorted by order
 function QTQuest:GetObjectives()
     local objectiveIds = self._manager:GetQuestField(self.id, "objectiveIds") or {}
     local objectives = {}
     for _, objectiveId in ipairs(objectiveIds) do
         table.insert(objectives, QTQuestObjective:new(self._manager, objectiveId))
     end
+
+    -- Sort objectives by order field (lowest to highest)
+    table.sort(objectives, function(a, b)
+        return a:GetOrder() < b:GetOrder()
+    end)
+
     return objectives
 end
 
@@ -204,9 +227,14 @@ end
 --- @return QTQuestObjective objective The newly created objective
 function QTQuest:AddObjective(description)
     local objective = QTQuestObjective:new(self._manager)
+
+    -- Get the next order number by finding the highest existing order and adding 1
+    local nextOrder = self:GetMaxObjectiveOrder() + 1
+
     objective:UpdateProperties(
         {
-            description = description
+            description = description,
+            order = nextOrder
         },
         "Added objective to quest",
         true  -- Apply defaults

@@ -77,6 +77,18 @@ function QTQuestObjective:GetModifiedTimestamp()
     return self._manager:GetObjectiveField(self.id, "modifiedTimestamp") or ""
 end
 
+--- Gets the order position of this objective within its quest
+--- @return number order The order position (starting at 1)
+function QTQuestObjective:GetOrder()
+    return self._manager:GetObjectiveField(self.id, "order") or 1
+end
+
+--- Sets the order position of this objective within its quest
+--- @param order number The new order position
+function QTQuestObjective:SetOrder(order)
+    self._manager:UpdateObjectiveField(self.id, "order", order)
+end
+
 
 --- Sets default properties for a new objective
 --- @param properties table Optional properties to override defaults
@@ -86,6 +98,7 @@ function QTQuestObjective:_applyDefaults(properties)
         title = "",
         description = "",
         status = QTQuestObjective.STATUS.NOT_STARTED,
+        order = 1,  -- Will be overridden by Quest:AddObjective() with correct value
         createdTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
         modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
     }
