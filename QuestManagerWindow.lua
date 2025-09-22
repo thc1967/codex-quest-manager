@@ -1469,8 +1469,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 }
             },
 
-
-            -- Timestamps row
+            -- TODO: DELETE Timestamps row
             -- gui.Panel{
             --     width = "100%",
             --     height = 40,
@@ -1582,20 +1581,20 @@ function QTQuestManagerWindow._getDialogStyles()
         },
 
         -- Legacy dialog styles (kept for compatibility)
-        gui.Style{
-            selectors = {"dialog-header"},
-            bgcolor = Styles.textColor,
-            color = Styles.backgroundColor
-        },
-        gui.Style{
-            selectors = {"dialog-title"},
-            fontSize = 18,
-            bold = true,
-            textAlignment = "left"
-        },
-        gui.Style{
-            selectors = {"dialog-content"}
-        },
+        -- TODO: DELETE gui.Style{
+        --     selectors = {"dialog-header"},
+        --     bgcolor = Styles.textColor,
+        --     color = Styles.backgroundColor
+        -- },
+        -- gui.Style{
+        --     selectors = {"dialog-title"},
+        --     fontSize = 18,
+        --     bold = true,
+        --     textAlignment = "left"
+        -- },
+        -- gui.Style{
+        --     selectors = {"dialog-content"}
+        -- },
     }
 end
 
@@ -1603,7 +1602,7 @@ end
 --- @param quest QTQuest The quest to display
 --- @param questManager QTQuestManager The quest manager instance
 --- @return table panel The quest item panel
-function QTQuestManagerWindow._buildQuestItem(quest, questManager)
+function QTQuestManagerWindow.TODODELETEME_buildQuestItem(quest, questManager)
     local title = quest:GetTitle() or "Untitled Quest"
     local status = quest:GetStatus() or "unknown"
     local category = quest:GetCategory() or "unknown"
@@ -1712,9 +1711,9 @@ end
 
 --- Shows the quest dialog for creating new quests
 --- @param questManager QTQuestManager The quest manager instance
-function QTQuestManagerWindow._showNewQuestDialog(questManager)
-    local dialog = QTQuestDialog:new(questManager)
-    if dialog then
-        dialog:Show()
-    end
-end
+-- TODO: DELETE function QTQuestManagerWindow._showNewQuestDialog(questManager)
+--     local dialog = QTQuestDialog:new(questManager)
+--     if dialog then
+--         dialog:Show()
+--     end
+-- end
