@@ -228,7 +228,9 @@ function QTQuestTrackerPanel:_buildQuestItem(quest)
             hmargin = 2,
             classes = {"quest-delete-button"},
             click = function()
-                self:_showDeleteConfirmation(quest.id, title)
+                QTUIUtils.ShowDeleteConfirmation("quest", title, function()
+                    self.questManager:DeleteQuest(quest.id)
+                end)
             end
         }
     end
@@ -621,112 +623,6 @@ function QTQuestTrackerPanel:_showEditQuestDialog(questId)
     end
 end
 
---- Shows a reusable confirmation dialog
---- @param displayText string The message to show in the confirmation dialog
---- @param onConfirm function The callback function to call if user confirms
-function QTQuestTrackerPanel:_showConfirmationDialog(displayText, onConfirm)
-    local confirmationWindow = gui.Panel{
-        id = "deleteConfirmationModal",
-        width = 400,
-        height = 200,
-        halign = "center",
-        valign = "center",
-        bgcolor = "#111111ff",
-        borderWidth = 2,
-        borderColor = Styles.textColor,
-        bgimage = "panels/square.png",
-        flow = "vertical",
-        hpad = 20,
-        vpad = 20,
-
-        children = {
-            -- Title
-            gui.Label{
-                text = "Confirm Action",
-                width = "100%",
-                height = 30,
-                fontSize = 18,
-                bold = true,
-                color = Styles.textColor,
-                textAlignment = "center",
-                halign = "center"
-            },
-
-            -- Confirmation message
-            gui.Label{
-                text = displayText,
-                width = "100%",
-                height = 60,
-                fontSize = 14,
-                color = Styles.textColor,
-                textAlignment = "center",
-                textWrap = true,
-                halign = "center",
-                vmargin = 10
-            },
-
-            -- Button panel
-            gui.Panel{
-                width = "100%",
-                height = 40,
-                flow = "horizontal",
-                halign = "center",
-                valign = "center",
-                children = {
-                    -- Confirm button
-                    gui.Button{
-                        text = "Confirm",
-                        width = 80,
-                        height = 30,
-                        hmargin = 10,
-                        fontSize = 14,
-                        bgcolor = "#cc0000",
-                        color = "white",
-                        bold = true,
-                        click = function(element)
-                            onConfirm()
-                            element:Get("deleteConfirmationModal"):DestroySelf()
-                        end
-                    },
-                    -- Cancel button
-                    gui.Button{
-                        text = "Cancel",
-                        width = 80,
-                        height = 30,
-                        hmargin = 10,
-                        fontSize = 14,
-                        color = Styles.textColor,
-                        click = function(element)
-                            element:Get("deleteConfirmationModal"):DestroySelf()
-                        end
-                    }
-                }
-            }
-        },
-
-        -- ESC key support
-        escape = function(element)
-            element:DestroySelf()
-        end
-    }
-
-    -- Add to main dialog panel
-    if gamehud and gamehud.mainDialogPanel then
-        gamehud.mainDialogPanel:AddChild(confirmationWindow)
-    end
-end
-
---- Shows a confirmation dialog before deleting a quest
---- @param questId string The ID of the quest to delete
---- @param questTitle string The title of the quest for confirmation message
-function QTQuestTrackerPanel:_showDeleteConfirmation(questId, questTitle)
-    local displayText = "Are you sure you want to delete quest " .. questTitle .. "?"
-    local onConfirm = function()
-        self.questManager:DeleteQuest(questId)
-    end
-
-    self:_showConfirmationDialog(displayText, onConfirm)
-end
 
 --- Shows the Quest Manager window
 function QTQuestTrackerPanel:_showQuestManagerWindow()

@@ -376,7 +376,7 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         valign = "top",
         hpad = 20,
         vpad = 20,
-        styles = QTQuestManagerWindow._getDialogStyles(),
+        styles = QTUIUtils.GetDialogStyles(),
         refreshObjectives = function(element)
             local scrollArea = element:Get("objectivesScrollArea")
             if scrollArea then
@@ -468,7 +468,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
         valign = "top",
         hpad = 20,
         vpad = 20,
-        styles = QTQuestManagerWindow._getDialogStyles(),
+        styles = QTUIUtils.GetDialogStyles(),
         refreshNotes = function(element)
             local scrollArea = element:Get("notesScrollArea")
             if scrollArea then
@@ -571,13 +571,12 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
             halign = "right",
             valign = "center",
             click = function()
-                local displayText = "Are you sure you want to delete this note?"
-                local onConfirm = function()
+                QTUIUtils.ShowDeleteConfirmation("note", "this note", function()
                     quest:RemoveNote(note.id)
-                end
-                -- We'd need to expose the confirmation dialog somehow
-                -- For now, let's create a simple confirmation
-                QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, note.id)
+                    if QTQuestManagerWindow.instance then
+                        QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
+                    end
+                end)
             end
         }
     end
@@ -750,8 +749,12 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
             hmargin = 5,
             vmargin = 5,
             click = function()
-                local questWindow = QTQuestManagerWindow.instance.windowElement
-                QTQuestManagerWindow.ShowDeleteObjectiveConfirmation(quest, objective.id, title, questWindow)
+                QTUIUtils.ShowDeleteConfirmation("objective", title, function()
+                    quest:RemoveObjective(objective.id)
+                    if QTQuestManagerWindow.instance then
+                        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+                    end
+                end)
             end
         }
     end
@@ -856,7 +859,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
         flow = "vertical",
         hpad = 20,
         vpad = 20,
-        styles = QTQuestManagerWindow._getDialogStyles(),
+        styles = QTUIUtils.GetDialogStyles(),
 
         children = {
             -- Title
@@ -932,187 +935,6 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
     gui.ShowModal(addNoteWindow)
 end
 
---- Shows confirmation dialog for deleting a note
---- @param quest QTQuest The quest object
---- @param noteId string The note ID to delete
-function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
-    local displayText = "Are you sure you want to delete this note?"
-
-    local confirmationWindow = gui.Panel{
-        width = 400,
-        height = 200,
-        halign = "center",
-        valign = "center",
-        bgcolor = "#111111ff",
-        borderWidth = 2,
-        borderColor = Styles.textColor,
-        bgimage = "panels/square.png",
-        flow = "vertical",
-        hpad = 20,
-        vpad = 20,
-        styles = QTQuestManagerWindow._getDialogStyles(),
-
-        children = {
-            -- Header
-            gui.Label{
-                text = "Delete Confirmation",
-                fontSize = 24,
-                width = "100%",
-                height = 30,
-                classes = {"QTLabel", "QTBase"},
-                textAlignment = "center",
-                halign = "center"
-            },
-
-            -- Confirmation message
-            gui.Label{
-                text = displayText,
-                width = "100%",
-                height = 80,
-                classes = {"QTLabel", "QTBase"},
-                textAlignment = "center",
-                textWrap = true,
-                halign = "center",
-                valign = "center"
-            },
-
-            -- Button panel
-            gui.Panel{
-                width = "100%",
-                height = 40,
-                flow = "horizontal",
-                halign = "center",
-                valign = "center",
-                children = {
-                    -- Cancel button (first)
-                    gui.Button{
-                        text = "Cancel",
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
-                        click = function(element)
-                            gui.CloseModal()
-                        end
-                    },
-                    -- Delete button (second)
-                    gui.Button{
-                        text = "Delete",
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
-                        click = function(element)
-                            quest:RemoveNote(noteId)
-                            if QTQuestManagerWindow.instance then
-                                QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
-                            end
-                            gui.CloseModal()
-                        end
-                    }
-                }
-            }
-        },
-
-        escape = function(element)
-            gui.CloseModal()
-        end
-    }
-
-    gui.ShowModal(confirmationWindow)
-end
-
-
---- Shows confirmation dialog for deleting an objective
---- @param quest QTQuest The quest object
---- @param objectiveId string The objective ID to delete
---- @param objectiveTitle string The objective title for display
-function QTQuestManagerWindow.ShowDeleteObjectiveConfirmation(quest, objectiveId, objectiveTitle, parentWindow)
-    local displayText = "Are you sure you want to delete objective \"" .. (objectiveTitle or "Untitled") .. "\"?"
-
-    local confirmationWindow = gui.Panel{
-        width = 400,
-        height = 200,
-        halign = "center",
-        valign = "center",
-        bgcolor = "#111111ff",
-        borderWidth = 2,
-        borderColor = Styles.textColor,
-        bgimage = "panels/square.png",
-        flow = "vertical",
-        hpad = 20,
-        vpad = 20,
-        styles = QTQuestManagerWindow._getDialogStyles(),
-
-        children = {
-            -- Header
-            gui.Label{
-                text = "Delete Confirmation",
-                width = "100%",
-                height = 30,
-                fontSize = 30,
-                classes = {"QTLabel", "QTBase"},
-                textAlignment = "center",
-                halign = "center"
-            },
-
-            -- Confirmation message
-            gui.Label{
-                text = displayText,
-                width = "100%",
-                height = 80,
-                classes = {"QTLabel", "QTBase"},
-                textAlignment = "center",
-                textWrap = true,
-                halign = "center",
-                valign = "center"
-            },
-
-            -- Button panel
-            gui.Panel{
-                width = "100%",
-                height = 40,
-                flow = "horizontal",
-                halign = "center",
-                valign = "center",
-                children = {
-                    -- Cancel button (first)
-                    gui.Button{
-                        text = "Cancel",
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
-                        click = function(element)
-                            gui.CloseModal()
-                        end
-                    },
-                    -- Delete button (second)
-                    gui.Button{
-                        text = "Delete",
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
-                        click = function(element)
-                            quest:RemoveObjective(objectiveId)
-                            if QTQuestManagerWindow.instance then
-                                QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
-                            end
-                            gui.CloseModal()
-                        end
-                    }
-                }
-            }
-        },
-
-        escape = function(element)
-            gui.CloseModal()
-        end
-    }
-
-    gui.ShowModal(confirmationWindow)
-end
 
 --- Builds the quest form for the Quest tab
 --- @param questManager QTQuestManager The quest manager instance
@@ -1296,7 +1118,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         height = "90%",
         flow = "vertical",
         valign = "top",
-        styles = QTQuestManagerWindow._getDialogStyles(),
+        styles = QTUIUtils.GetDialogStyles(),
         hpad = 20,
         vpad = 10,
         children = {
@@ -1468,252 +1290,6 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                     rewardsClaimedCheckbox
                 }
             },
-
-            -- TODO: DELETE Timestamps row
-            -- gui.Panel{
-            --     width = "100%",
-            --     height = 40,
-            --     flow = "horizontal",
-            --     vmargin = 5,
-            --     children = {
-            --         gui.Panel{
-            --             width = "50%",
-            --             height = 40,
-            --             flow = "horizontal",
-            --             valign = "center",
-            --             children = {
-            --                 gui.Label{
-            --                     text = "Created:",
-            --                     classes = {"field-label"},
-            --                     width = "25%",
-            --                     height = 30,
-            --                     valign = "center"
-            --                 },
-            --                 createdTimestampLabel
-            --             }
-            --         },
-            --         gui.Panel{
-            --             width = "50%",
-            --             height = 40,
-            --             flow = "horizontal",
-            --             valign = "center",
-            --             children = {
-            --                 gui.Label{
-            --                     text = "Modified:",
-            --                     classes = {"field-label"},
-            --                     width = "25%",
-            --                     height = 30,
-            --                     valign = "center"
-            --                 },
-            --                 modifiedTimestampLabel
-            --             }
-            --         }
-            --     }
-            -- }
         }
     }
 end
-
---- Gets the styling configuration for the dialog form
---- @return table styles Array of GUI styles for the dialog using QTBase inheritance
-function QTQuestManagerWindow._getDialogStyles()
-    return {
-        -- QTBase: Foundation style for all Quest Manager controls
-        gui.Style{
-            selectors = {"QTBase"},
-            fontSize = 18,
-            fontFace = "Berling",
-            color = Styles.textColor,
-            height = 40,
-        },
-
-        -- QT Control Types: Inherit from QTBase, add specific properties
-        gui.Style{
-            selectors = {"QTLabel", "QTBase"},
-            bold = true,
-            textAlignment = "left"
-        },
-        gui.Style{
-            selectors = {"QTInput", "QTBase"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"QTDropdown", "QTBase"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"QTCheck", "QTBase"},
-            -- Inherits all QTBase properties
-        },
-        gui.Style{
-            selectors = {"QTButton", "QTBase"},
-            fontSize = 22,
-            textAlignment = "center",
-            bold = true,
-            height = 35  -- Override QTBase height for buttons
-        },
-
-        -- Objective drag handle styles
-        gui.Style{
-            selectors = {"objective-drag-handle"},
-            width = 24,
-            height = 24,
-            bgcolor = "#444444aa",
-            bgimage = "panels/square.png",
-            transitionTime = 0.2
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "hover"},
-            bgcolor = "#666666cc"
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "dragging"},
-            bgcolor = "#888888ff",
-            opacity = 0.8
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "drag-target"},
-            bgcolor = "#4CAF50aa"
-        },
-
-        -- Legacy dialog styles (kept for compatibility)
-        -- TODO: DELETE gui.Style{
-        --     selectors = {"dialog-header"},
-        --     bgcolor = Styles.textColor,
-        --     color = Styles.backgroundColor
-        -- },
-        -- gui.Style{
-        --     selectors = {"dialog-title"},
-        --     fontSize = 18,
-        --     bold = true,
-        --     textAlignment = "left"
-        -- },
-        -- gui.Style{
-        --     selectors = {"dialog-content"}
-        -- },
-    }
-end
-
---- Builds a single quest item for display
---- @param quest QTQuest The quest to display
---- @param questManager QTQuestManager The quest manager instance
---- @return table panel The quest item panel
-function QTQuestManagerWindow.TODODELETEME_buildQuestItem(quest, questManager)
-    local title = quest:GetTitle() or "Untitled Quest"
-    local status = quest:GetStatus() or "unknown"
-    local category = quest:GetCategory() or "unknown"
-    local priority = quest:GetPriority() or "medium"
-
-    -- Status display formatting
-    local statusText = status:gsub("_", " "):gsub("(%l)(%w*)", function(a, b)
-        return string.upper(a) .. b
-    end)
-
-    return gui.Panel{
-        width = "100%",
-        height = 60,
-        flow = "horizontal",
-        bgcolor = Styles.backgroundColor,
-        borderWidth = 1,
-        borderColor = Styles.textColor,
-        vmargin = 2,
-        click = function()
-            QTQuestManagerWindow._showEditQuestDialog(questManager, quest.id)
-        end,
-        children = {
-            -- Status indicator
-            gui.Panel{
-                width = 6,
-                height = "100%",
-                bgcolor = status == "active" and "green" or
-                         status == "completed" and "blue" or
-                         status == "failed" and "red" or
-                         Styles.textColor
-            },
-            -- Quest content
-            gui.Panel{
-                width = "90%",
-                height = "100%",
-                flow = "vertical",
-                hmargin = 10,
-                children = {
-                    gui.Label{
-                        text = title,
-                        width = "100%",
-                        height = 30,
-                        fontSize = 16,
-                        color = Styles.textColor,
-                        bold = true,
-                        textAlignment = "left",
-                        valign = "center"
-                    },
-                    gui.Panel{
-                        width = "100%",
-                        height = 25,
-                        flow = "horizontal",
-                        children = {
-                            gui.Label{
-                                text = statusText,
-                                width = "33%",
-                                height = 25,
-                                fontSize = 12,
-                                color = Styles.textColor,
-                                textAlignment = "left",
-                                valign = "center"
-                            },
-                            gui.Label{
-                                text = category:gsub("_", " "),
-                                width = "33%",
-                                height = 25,
-                                fontSize = 12,
-                                color = Styles.textColor,
-                                textAlignment = "center",
-                                valign = "center"
-                            },
-                            gui.Label{
-                                text = priority .. " priority",
-                                width = "34%",
-                                height = 25,
-                                fontSize = 12,
-                                color = Styles.textColor,
-                                textAlignment = "right",
-                                valign = "center"
-                            }
-                        }
-                    }
-                }
-            },
-            -- Action indicator
-            gui.Panel{
-                width = "10%",
-                height = "100%",
-                children = {
-                    gui.Label{
-                        text = "...",
-                        width = "100%",
-                        height = "100%",
-                        fontSize = 14,
-                        color = Styles.textColor,
-                        bold = true,
-                        halign = "center",
-                        valign = "center",
-                        textAlignment = "center"
-                    }
-                }
-            }
-        }
-    }
-end
-
---- Shows the quest dialog for creating new quests
---- @param questManager QTQuestManager The quest manager instance
--- TODO: DELETE function QTQuestManagerWindow._showNewQuestDialog(questManager)
---     local dialog = QTQuestDialog:new(questManager)
---     if dialog then
---         dialog:Show()
---     end
--- end
