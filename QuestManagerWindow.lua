@@ -510,27 +510,6 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
     }
 end
 
---- Helper function to get player display name and color from user ID
---- @param userId string The user ID to look up
---- @return string coloredDisplayName The player's display name with HTML color tags, or "{unknown}" if not found
-function QTQuestManagerWindow.GetPlayerDisplayName(userId)
-    if not userId or userId == "" then
-        return "{unknown}"
-    end
-
-    local sessionInfo = dmhub.GetSessionInfo(userId)
-    if sessionInfo and sessionInfo.displayName then
-        local displayName = sessionInfo.displayName
-        if sessionInfo.displayColor and sessionInfo.displayColor.tostring then
-            local colorCode = sessionInfo.displayColor.tostring
-            return "<color=" .. colorCode .. ">" .. displayName .. "</color>"
-        else
-            return displayName
-        end
-    end
-
-    return "{unknown}"
-end
 
 --- Creates a single note item display
 --- @param questManager QTQuestManager The quest manager instance
@@ -550,7 +529,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
     end
 
     -- Get player display name
-    local authorDisplayName = QTQuestManagerWindow.GetPlayerDisplayName(authorId)
+    local authorDisplayName = QTUIUtils.GetPlayerDisplayName(authorId)
 
     -- Build delete button if user has permission
     local headerChildren = {
