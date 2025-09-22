@@ -1,6 +1,6 @@
 local mod = dmhub.GetModLoading()
-local questManager = QTQuestManager:new()
-local questPanel = QTQuestTrackerPanel:new(questManager)
+local questManager = QMQuestManager:new()
+local questPanel = QMQuestTrackerPanel:new(questManager)
 if questPanel then
     questPanel:Register()
 end

@@ -2,15 +2,15 @@ local mod = dmhub.GetModLoading()
 
 --- Quest Tracker Panel - Main dockable panel for quest management
 --- Provides the primary interface for viewing and managing quests in the Codex VTT
---- @class QTQuestTrackerPanel
---- @field questManager QTQuestManager The quest manager instance for data operations
-QTQuestTrackerPanel = RegisterGameType("QTQuestTrackerPanel")
-QTQuestTrackerPanel.__index = QTQuestTrackerPanel
+--- @class QMQuestTrackerPanel
+--- @field questManager QMQuestManager The quest manager instance for data operations
+QMQuestTrackerPanel = RegisterGameType("QMQuestTrackerPanel")
+QMQuestTrackerPanel.__index = QMQuestTrackerPanel
 
 --- Creates a new Quest Tracker Panel instance
---- @param questManager QTQuestManager The quest manager instance for data operations
---- @return QTQuestTrackerPanel|nil instance The new panel instance
-function QTQuestTrackerPanel:new(questManager)
+--- @param questManager QMQuestManager The quest manager instance for data operations
+--- @return QMQuestTrackerPanel|nil instance The new panel instance
+function QMQuestTrackerPanel:new(questManager)
     local instance = setmetatable({}, self)
     instance.questManager = questManager
 
@@ -24,7 +24,7 @@ end
 
 --- Registers the dockable panel with the Codex UI system
 --- Creates and configures the main quest tracker interface
-function QTQuestTrackerPanel:Register()
+function QMQuestTrackerPanel:Register()
     local questTrackerPanel = self
     DockablePanel.Register {
         name = "Quest Manager",
@@ -41,7 +41,7 @@ end
 
 --- Builds the main panel structure for the quest tracker
 --- @return table panel The main GUI panel containing all quest tracker elements
-function QTQuestTrackerPanel:_buildMainPanel()
+function QMQuestTrackerPanel:_buildMainPanel()
     local questTrackerPanel = self
     return gui.Panel {
         width = "100%",
@@ -65,7 +65,7 @@ end
 
 --- Builds the header panel containing title and controls
 --- @return table panel The header panel with title and action buttons
-function QTQuestTrackerPanel:_buildHeaderPanel()
+function QMQuestTrackerPanel:_buildHeaderPanel()
     local questCount = 0
     if self.questManager then
         local allQuests = self.questManager:GetAllQuests()
@@ -83,20 +83,20 @@ function QTQuestTrackerPanel:_buildHeaderPanel()
                 classes = {"header-title"},
                 width = "60%"
             },
-            gui.Button {
-                text = "DEBUG",
-                width = 60,
-                height = 30,
-                halign = "right",
-                valign = "center",
-                hmargin = 5,
-                linger = function(element)
-                    gui.Tooltip("Debug document contents")(element)
-                end,
-                click = function(element)
-                    self:_debugDocument()
-                end
-            },
+            -- gui.Button {
+            --     text = "DEBUG",
+            --     width = 60,
+            --     height = 30,
+            --     halign = "right",
+            --     valign = "center",
+            --     hmargin = 5,
+            --     linger = function(element)
+            --         gui.Tooltip("Debug document contents")(element)
+            --     end,
+            --     click = function(element)
+            --         self:_debugDocument()
+            --     end
+            -- },
             gui.AddButton {
                 halign = "right",
                 valign = "center",
@@ -113,7 +113,7 @@ end
 
 --- Builds the main content panel for quest display
 --- @return table panel The content panel containing categorized quest sections
-function QTQuestTrackerPanel:_buildContentPanel()
+function QMQuestTrackerPanel:_buildContentPanel()
     local questChildren = {}
 
     if self.questManager then
@@ -134,7 +134,7 @@ function QTQuestTrackerPanel:_buildContentPanel()
             -- Group quests by category
             local questsByCategory = {}
             for _, quest in ipairs(allQuests) do
-                local category = quest:GetCategory() or QTQuest.CATEGORY.MAIN
+                local category = quest:GetCategory() or QMQuest.CATEGORY.MAIN
                 if not questsByCategory[category] then
                     questsByCategory[category] = {}
                 end
@@ -143,11 +143,11 @@ function QTQuestTrackerPanel:_buildContentPanel()
 
             -- Define display order for categories
             local categoryOrder = {
-                QTQuest.CATEGORY.MAIN,
-                QTQuest.CATEGORY.SIDE,
-                QTQuest.CATEGORY.PERSONAL,
-                QTQuest.CATEGORY.FACTION,
-                QTQuest.CATEGORY.TUTORIAL
+                QMQuest.CATEGORY.MAIN,
+                QMQuest.CATEGORY.SIDE,
+                QMQuest.CATEGORY.PERSONAL,
+                QMQuest.CATEGORY.FACTION,
+                QMQuest.CATEGORY.TUTORIAL
             }
 
             -- Create collapsible sections for each category that has quests
@@ -184,9 +184,9 @@ function QTQuestTrackerPanel:_buildContentPanel()
 end
 
 --- Builds a single quest item display
---- @param quest QTQuest The quest to display
+--- @param quest QMQuest The quest to display
 --- @return table panel The quest item panel
-function QTQuestTrackerPanel:_buildQuestItem(quest)
+function QMQuestTrackerPanel:_buildQuestItem(quest)
     local title = quest:GetTitle() or "Untitled Quest"
     local status = quest:GetStatus() or "unknown"
     local category = quest:GetCategory() or "unknown"
@@ -228,7 +228,7 @@ function QTQuestTrackerPanel:_buildQuestItem(quest)
             hmargin = 2,
             classes = {"quest-delete-button"},
             click = function()
-                QTUIUtils.ShowDeleteConfirmation("quest", title, function()
+                QMUIUtils.ShowDeleteConfirmation("quest", title, function()
                     self.questManager:DeleteQuest(quest.id)
                 end)
             end
@@ -293,9 +293,9 @@ function QTQuestTrackerPanel:_buildQuestItem(quest)
 end
 
 --- Maps quest category IDs to user-friendly display names
---- @param categoryId string The category ID from QTQuest.CATEGORY
+--- @param categoryId string The category ID from QMQuest.CATEGORY
 --- @return string displayName The user-friendly category name
-function QTQuestTrackerPanel:_getCategoryDisplayName(categoryId)
+function QMQuestTrackerPanel:_getCategoryDisplayName(categoryId)
     if not categoryId or categoryId == "" then
         return "Other Quests"
     end
@@ -332,11 +332,11 @@ local triangleStyles = {
 }
 
 --- Builds a collapsible header for a quest category
---- @param categoryId string The category ID from QTQuest.CATEGORY
+--- @param categoryId string The category ID from QMQuest.CATEGORY
 --- @param questCount number The number of quests in this category
 --- @param contentPanel table The content panel that this header will toggle
 --- @return table panel The category header panel with triangle and label
-function QTQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, contentPanel)
+function QMQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, contentPanel)
     local categoryName = self:_getCategoryDisplayName(categoryId)
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
     local isCollapsed = dmhub.GetPref(prefKey) or false
@@ -374,10 +374,10 @@ function QTQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, conten
 end
 
 --- Builds the collapsible content area for a quest category
---- @param categoryQuests table Array of QTQuest instances for this category
+--- @param categoryQuests table Array of QMQuest instances for this category
 --- @param categoryId string The category ID to check collapse state
 --- @return table panel The content panel containing quest items
-function QTQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
+function QMQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
     local questChildren = {}
 
     -- Add quest items with dividers
@@ -410,10 +410,10 @@ function QTQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
 end
 
 --- Builds a complete collapsible section for a quest category
---- @param categoryId string The category ID from QTQuest.CATEGORY
---- @param categoryQuests table Array of QTQuest instances for this category
+--- @param categoryId string The category ID from QMQuest.CATEGORY
+--- @param categoryQuests table Array of QMQuest instances for this category
 --- @return table panel The complete category section with header and collapsible content
-function QTQuestTrackerPanel:_buildCategorySection(categoryId, categoryQuests)
+function QMQuestTrackerPanel:_buildCategorySection(categoryId, categoryQuests)
     local questCount = #categoryQuests
 
     -- Build content panel first so we can pass it to header for collapse control
@@ -436,7 +436,7 @@ end
 
 --- Gets additional styling for content elements
 --- @return table styles Array of GUI styles for content
-function QTQuestTrackerPanel:_getContentStyles()
+function QMQuestTrackerPanel:_getContentStyles()
     return {
         gui.Style {
             selectors = {"empty-state"},
@@ -560,7 +560,7 @@ end
 
 --- Gets the styling configuration for the main panel
 --- @return table styles Array of GUI styles for the quest tracker interface
-function QTQuestTrackerPanel:_getMainStyles()
+function QMQuestTrackerPanel:_getMainStyles()
     return {
         gui.Style {
             selectors = {"header-title"},
@@ -603,9 +603,9 @@ function QTQuestTrackerPanel:_getMainStyles()
 end
 
 --- Shows the quest dialog for creating new quests
-function QTQuestTrackerPanel:_showNewQuestDialog()
+function QMQuestTrackerPanel:_showNewQuestDialog()
     local draftQuest = self.questManager:CreateDraftQuest("New Quest", dmhub.playerId)
-    local questManagerWindow = QTQuestManagerWindow:new(self.questManager, draftQuest)
+    local questManagerWindow = QMQuestManagerWindow:new(self.questManager, draftQuest)
     if questManagerWindow then
         questManagerWindow:Show()
     end
@@ -613,10 +613,10 @@ end
 
 --- Shows the quest dialog for editing existing quests
 --- @param questId string The ID of the quest to edit
-function QTQuestTrackerPanel:_showEditQuestDialog(questId)
+function QMQuestTrackerPanel:_showEditQuestDialog(questId)
     local quest = self.questManager:GetQuest(questId)
     if quest then
-        local questManagerWindow = QTQuestManagerWindow:new(self.questManager, quest)
+        local questManagerWindow = QMQuestManagerWindow:new(self.questManager, quest)
         if questManagerWindow then
             questManagerWindow:Show()
         end
@@ -625,29 +625,29 @@ end
 
 
 --- Shows the Quest Manager window
-function QTQuestTrackerPanel:_showQuestManagerWindow()
-    local questManagerWindow = QTQuestManagerWindow:new(self.questManager)
+function QMQuestTrackerPanel:_showQuestManagerWindow()
+    local questManagerWindow = QMQuestManagerWindow:new(self.questManager)
     if questManagerWindow then
         questManagerWindow:Show()
     end
 end
 
 --- Refreshes the panel display to show updated quest data
-function QTQuestTrackerPanel:_refreshDisplay()
+function QMQuestTrackerPanel:_refreshDisplay()
     -- The panel will automatically refresh when the document changes
     -- via the monitorGame and refreshGame mechanism
 end
 
 --- Refreshes the panel content (used by both refreshGame and show events)
 --- @param element table The main panel element to refresh
-function QTQuestTrackerPanel:_refreshPanelContent(element)
+function QMQuestTrackerPanel:_refreshPanelContent(element)
     local headerPanel = self:_buildHeaderPanel()
     local contentPanel = self:_buildContentPanel()
     element.children = {headerPanel, contentPanel}
 end
 
 --- Debug method to print the raw document contents from persistence
-function QTQuestTrackerPanel:_debugDocument()
-    local doc = self.questManager.mod:GetDocumentSnapshot("QTQuestLog")
+function QMQuestTrackerPanel:_debugDocument()
+    local doc = self.questManager.mod:GetDocumentSnapshot("QMQuestLog")
     print("THC:: PERSISTED::", json(doc.data))
 end

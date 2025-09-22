@@ -1,13 +1,13 @@
 --- Individual objective within a quest with status tracking and notes
 --- Supports the same status progression as quests with player and director notes
---- @class QTQuestObjective
---- @field _manager QTQuestManager The quest manager for document operations
+--- @class QMQuestObjective
+--- @field _manager QMQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this objective 
-QTQuestObjective = RegisterGameType("QTQuestObjective")
-QTQuestObjective.__index = QTQuestObjective
+QMQuestObjective = RegisterGameType("QMQuestObjective")
+QMQuestObjective.__index = QMQuestObjective
 
 --- Valid status values for quest objectives
-QTQuestObjective.STATUS = {
+QMQuestObjective.STATUS = {
     NOT_STARTED = "not_started",
     ACTIVE = "active",
     COMPLETED = "completed",
@@ -16,11 +16,11 @@ QTQuestObjective.STATUS = {
 }
 
 --- Creates a new quest objective instance
---- @param manager QTQuestManager The quest manager for document operations
+--- @param manager QMQuestManager The quest manager for document operations
 --- @param questId string GUID identifier for the parent quest
 --- @param objectiveId string GUID identifier for this objective
---- @return QTQuestObjective instance The new objective instance
-function QTQuestObjective:new(manager, questId, objectiveId)
+--- @return QMQuestObjective instance The new objective instance
+function QMQuestObjective:new(manager, questId, objectiveId)
     local instance = setmetatable({}, self)
     instance._manager = manager
     instance.questId = questId
@@ -30,37 +30,37 @@ end
 
 --- Gets the title of this objective
 --- @return string title The objective's title
-function QTQuestObjective:GetTitle()
+function QMQuestObjective:GetTitle()
     return self._manager:GetQuestObjectiveField(self.questId, self.id, "title") or ""
 end
 
 --- Sets the title of this objective
 --- @param title string The new title for the objective
-function QTQuestObjective:SetTitle(title)
+function QMQuestObjective:SetTitle(title)
     self._manager:UpdateQuestObjectiveField(self.questId, self.id, "title", title)
 end
 
 --- Gets the description text of this objective
 --- @return string description The objective's description
-function QTQuestObjective:GetDescription()
+function QMQuestObjective:GetDescription()
     return self._manager:GetQuestObjectiveField(self.questId, self.id, "description") or ""
 end
 
 --- Sets the description text of this objective
 --- @param description string The new description for the objective
-function QTQuestObjective:SetDescription(description)
+function QMQuestObjective:SetDescription(description)
     self._manager:UpdateQuestObjectiveField(self.questId, self.id, "description", description)
 end
 
 --- Gets the current status of this objective
---- @return string status One of QTQuestObjective.STATUS values
-function QTQuestObjective:GetStatus()
-    return self._manager:GetQuestObjectiveField(self.questId, self.id, "status") or QTQuestObjective.STATUS.NOT_STARTED
+--- @return string status One of QMQuestObjective.STATUS values
+function QMQuestObjective:GetStatus()
+    return self._manager:GetQuestObjectiveField(self.questId, self.id, "status") or QMQuestObjective.STATUS.NOT_STARTED
 end
 
 --- Sets the status of this objective
---- @param status string One of QTQuestObjective.STATUS values
-function QTQuestObjective:SetStatus(status)
+--- @param status string One of QMQuestObjective.STATUS values
+function QMQuestObjective:SetStatus(status)
     if self:_isValidStatus(status) then
         self._manager:UpdateQuestObjectiveField(self.questId, self.id, "status", status)
         self._manager:UpdateQuestObjectiveField(self.questId, self.id, "modifiedTimestamp", os.date("!%Y-%m-%dT%H:%M:%SZ"))
@@ -69,25 +69,25 @@ end
 
 --- Gets the timestamp when this objective was created
 --- @return string timestamp ISO 8601 UTC timestamp
-function QTQuestObjective:GetCreatedTimestamp()
+function QMQuestObjective:GetCreatedTimestamp()
     return self._manager:GetQuestObjectiveField(self.questId, self.id, "createdTimestamp") or ""
 end
 
 --- Gets the timestamp when this objective was last modified
 --- @return string timestamp ISO 8601 UTC timestamp
-function QTQuestObjective:GetModifiedTimestamp()
+function QMQuestObjective:GetModifiedTimestamp()
     return self._manager:GetQuestObjectiveField(self.questId, self.id, "modifiedTimestamp") or ""
 end
 
 --- Gets the order position of this objective within its quest
 --- @return number order The order position (starting at 1)
-function QTQuestObjective:GetOrder()
+function QMQuestObjective:GetOrder()
     return self._manager:GetQuestObjectiveField(self.questId, self.id, "order") or 1
 end
 
 --- Sets the order position of this objective within its quest
 --- @param order number The new order position
-function QTQuestObjective:SetOrder(order)
+function QMQuestObjective:SetOrder(order)
     self._manager:UpdateQuestObjectiveField(self.questId, self.id, "order", order)
 end
 
@@ -95,11 +95,11 @@ end
 --- Sets default properties for a new objective
 --- @param properties table Optional properties to override defaults
 --- @return table properties The properties with defaults applied
-function QTQuestObjective:_applyDefaults(properties)
+function QMQuestObjective:_applyDefaults(properties)
     local defaults = {
         title = "",
         description = "",
-        status = QTQuestObjective.STATUS.NOT_STARTED,
+        status = QMQuestObjective.STATUS.NOT_STARTED,
         order = 1,  -- Will be overridden by Quest:AddObjective() with correct value
         createdTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
         modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -123,7 +123,7 @@ end
 --- @param properties table Key-value pairs of properties to update
 --- @param changeDescription string Optional description for the change
 --- @param applyDefaults boolean Whether to apply defaults for new objectives
-function QTQuestObjective:UpdateProperties(properties, changeDescription, applyDefaults)
+function QMQuestObjective:UpdateProperties(properties, changeDescription, applyDefaults)
     -- Apply defaults if this is a new objective
     if applyDefaults then
         properties = self:_applyDefaults(properties)
@@ -142,8 +142,8 @@ end
 --- Validates if the given status is valid for objectives
 --- @param status string The status to validate
 --- @return boolean valid True if the status is valid
-function QTQuestObjective:_isValidStatus(status)
-    for _, validStatus in pairs(QTQuestObjective.STATUS) do
+function QMQuestObjective:_isValidStatus(status)
+    for _, validStatus in pairs(QMQuestObjective.STATUS) do
         if status == validStatus then
             return true
         end

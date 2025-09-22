@@ -1,9 +1,9 @@
 --- Quest Manager Window - Main windowed interface with tabbed layout
 --- Provides a resizable, closable window with Quest, Objectives, and Notes tabs
---- @class QTQuestManagerWindow
---- @field questManager QTQuestManager The quest manager for data operations
-QTQuestManagerWindow = RegisterGameType("QTQuestManagerWindow")
-QTQuestManagerWindow.__index = QTQuestManagerWindow
+--- @class QMQuestManagerWindow
+--- @field questManager QMQuestManager The quest manager for data operations
+QMQuestManagerWindow = RegisterGameType("QMQuestManagerWindow")
+QMQuestManagerWindow.__index = QMQuestManagerWindow
 
 local mod = dmhub.GetModLoading()
 
@@ -14,10 +14,10 @@ setting{
     default = false,
 }
 
-QTQuestManagerWindow.defaultTab = "Quest"
+QMQuestManagerWindow.defaultTab = "Quest"
 
 -- Tab styling similar to character sheet
-QTQuestManagerWindow.TabsStyles = {
+QMQuestManagerWindow.TabsStyles = {
     gui.Style{
         selectors = {"questTabContainer"},
         height = 40,
@@ -76,25 +76,25 @@ QTQuestManagerWindow.TabsStyles = {
     },
 }
 
-QTQuestManagerWindow.TabOptions = {}
+QMQuestManagerWindow.TabOptions = {}
 
 --- Registers a tab with the Quest Manager window
 --- @param tab table Tab configuration with id, text, and panel function
-function QTQuestManagerWindow.RegisterTab(tab)
-    local index = #QTQuestManagerWindow.TabOptions + 1
-    for i, t in ipairs(QTQuestManagerWindow.TabOptions) do
+function QMQuestManagerWindow.RegisterTab(tab)
+    local index = #QMQuestManagerWindow.TabOptions + 1
+    for i, t in ipairs(QMQuestManagerWindow.TabOptions) do
         if t.id == tab.id then
             index = i
         end
     end
-    QTQuestManagerWindow.TabOptions[index] = tab
+    QMQuestManagerWindow.TabOptions[index] = tab
 end
 
 --- Creates a new Quest Manager window instance
---- @param questManager QTQuestManager The quest manager for data operations
---- @param quest QTQuest The quest object to edit (draft or existing)
---- @return QTQuestManagerWindow instance The new window instance
-function QTQuestManagerWindow:new(questManager, quest)
+--- @param questManager QMQuestManager The quest manager for data operations
+--- @param quest QMQuest The quest object to edit (draft or existing)
+--- @return QMQuestManagerWindow instance The new window instance
+function QMQuestManagerWindow:new(questManager, quest)
     local instance = setmetatable({}, self)
     instance.questManager = questManager
     instance.quest = quest
@@ -107,27 +107,27 @@ function QTQuestManagerWindow:new(questManager, quest)
 
 
     -- Set as global instance for refresh events (like CharacterSheet.instance)
-    QTQuestManagerWindow.instance = instance
+    QMQuestManagerWindow.instance = instance
 
     return instance
 end
 
 --- Fires an event on the window element (like CharacterSheet.instance:FireEvent)
 --- @param eventName string The name of the event to fire
-function QTQuestManagerWindow:FireEvent(eventName)
+function QMQuestManagerWindow:FireEvent(eventName)
     if self.windowElement then
         self.windowElement:FireEvent(eventName)
     end
 end
 
-function QTQuestManagerWindow:FireEventTree(eventName)
+function QMQuestManagerWindow:FireEventTree(eventName)
     if self.windowElement then
         self.windowElement:FireEventTree(eventName)
     end
 end
 
 --- Creates and shows the Quest Manager window
-function QTQuestManagerWindow:Show()
+function QMQuestManagerWindow:Show()
     if self.isOpen then
         return -- Already open
     end
@@ -142,7 +142,7 @@ end
 
 --- Creates the main window structure - WITH QUEST TAB CONTENT
 --- @return table panel The main window panel
-function QTQuestManagerWindow:_createWindow()
+function QMQuestManagerWindow:_createWindow()
     local questManagerWindow = self
     local selectedTab = "Quest"
 
@@ -152,12 +152,12 @@ function QTQuestManagerWindow:_createWindow()
     end
 
     -- Tab content panels
-    local questPanel = QTQuestManagerWindow.CreateQuestPanel(self.questManager, self.quest)
+    local questPanel = QMQuestManagerWindow.CreateQuestPanel(self.questManager, self.quest)
 
-    local objectivesPanel = QTQuestManagerWindow.CreateObjectivesPanel(self.questManager, self.quest)
+    local objectivesPanel = QMQuestManagerWindow.CreateObjectivesPanel(self.questManager, self.quest)
     objectivesPanel.classes = {"hidden"}
 
-    local notesPanel = QTQuestManagerWindow.CreateNotesPanel(self.questManager, self.quest)
+    local notesPanel = QMQuestManagerWindow.CreateNotesPanel(self.questManager, self.quest)
     notesPanel.classes = {"hidden"}
 
     local tabPanels = {questPanel, objectivesPanel, notesPanel}
@@ -202,7 +202,7 @@ function QTQuestManagerWindow:_createWindow()
     -- Create tabs panel
     tabsPanel = gui.Panel{
         classes = {"questTabContainer"},
-        styles = {QTQuestManagerWindow.TabsStyles},
+        styles = {QMQuestManagerWindow.TabsStyles},
         children = {
             gui.Label{
                 classes = {"questTab", "selected"},
@@ -243,7 +243,7 @@ function QTQuestManagerWindow:_createWindow()
         styles = {
             Styles.Default,
             Styles.Panel,
-            QTQuestManagerWindow.TabsStyles
+            QMQuestManagerWindow.TabsStyles
         },
         children = {
             -- Main content area (full height, no footer)
@@ -281,38 +281,38 @@ function QTQuestManagerWindow:_createWindow()
 end
 
 -- Register default tabs
-QTQuestManagerWindow.RegisterTab{
+QMQuestManagerWindow.RegisterTab{
     id = "Quest",
     text = "Quest",
     order = 1,
     panel = function(questManager, quest)
-        return QTQuestManagerWindow.CreateQuestPanel(questManager, quest)
+        return QMQuestManagerWindow.CreateQuestPanel(questManager, quest)
     end
 }
 
-QTQuestManagerWindow.RegisterTab{
+QMQuestManagerWindow.RegisterTab{
     id = "Objectives",
     text = "Objectives",
     order = 2,
     panel = function(questManager, quest)
-        return QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
+        return QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
     end
 }
 
-QTQuestManagerWindow.RegisterTab{
+QMQuestManagerWindow.RegisterTab{
     id = "Notes",
     text = "Notes",
     order = 3,
     panel = function(questManager, quest)
-        return QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
+        return QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
     end
 }
 
 --- Creates the Quest tab panel
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object to display/edit
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object to display/edit
 --- @return table panel The quest panel
-function QTQuestManagerWindow.CreateQuestPanel(questManager, quest)
+function QMQuestManagerWindow.CreateQuestPanel(questManager, quest)
     return gui.Panel{
         id = "questPanel",
         width = "100%",
@@ -328,16 +328,16 @@ function QTQuestManagerWindow.CreateQuestPanel(questManager, quest)
             }
         },
         children = {
-            QTQuestManagerWindow._buildQuestForm(questManager, quest)
+            QMQuestManagerWindow._buildQuestForm(questManager, quest)
         }
     }
 end
 
 --- Creates the Objectives tab panel
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object to display/edit
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object to display/edit
 --- @return table panel The objectives panel
-function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
+function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
     local function buildObjectivesList()
         local objectives = quest:GetObjectives()
         local objectiveChildren = {}
@@ -350,7 +350,7 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                 halign = "center",
                 valign = "center",
                 textAlignment = "center",
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 bold = false
             }
         else
@@ -361,7 +361,7 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                 end
 
                 -- Objective item
-                objectiveChildren[#objectiveChildren + 1] = QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
+                objectiveChildren[#objectiveChildren + 1] = QMQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
             end
         end
 
@@ -376,7 +376,7 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         valign = "top",
         hpad = 20,
         vpad = 20,
-        styles = QTUIUtils.GetDialogStyles(),
+        styles = QMUIUtils.GetDialogStyles(),
         refreshObjectives = function(element)
             local scrollArea = element:Get("objectivesScrollArea")
             if scrollArea then
@@ -416,8 +416,8 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                     -- Add new empty objective directly (character sheet pattern)
                     quest:AddObjective("")
                     -- Refresh to show the new objective
-                    if QTQuestManagerWindow.instance then
-                        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+                    if QMQuestManagerWindow.instance then
+                        QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                     end
                 end
             }
@@ -426,10 +426,10 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
 end
 
 --- Creates the Notes tab panel
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object to display/edit
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object to display/edit
 --- @return table panel The notes panel
-function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
+function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
     local function buildNotesList()
         local notes = quest:GetNotes()
         local noteChildren = {}
@@ -442,7 +442,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
                 halign = "center",
                 valign = "center",
                 textAlignment = "center",
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 bold = false
             }
         else
@@ -453,7 +453,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
                 end
 
                 -- Note item
-                noteChildren[#noteChildren + 1] = QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+                noteChildren[#noteChildren + 1] = QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
             end
         end
 
@@ -468,7 +468,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
         valign = "top",
         hpad = 20,
         vpad = 20,
-        styles = QTUIUtils.GetDialogStyles(),
+        styles = QMUIUtils.GetDialogStyles(),
         refreshNotes = function(element)
             local scrollArea = element:Get("notesScrollArea")
             if scrollArea then
@@ -503,7 +503,7 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
                     gui.Tooltip("Add a new note")(element)
                 end,
                 click = function(element)
-                    QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+                    QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                 end
             }
         }
@@ -512,11 +512,11 @@ end
 
 
 --- Creates a single note item display
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object
---- @param note QTQuestNote The note to display
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object
+--- @param note QMQuestNote The note to display
 --- @return table panel The note item panel
-function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+function QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
     local content = note:GetContent() or ""
     local authorId = note:GetAuthorId() or "Unknown"
     local timestamp = note:GetTimestamp() or ""
@@ -529,7 +529,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
     end
 
     -- Get player display name
-    local authorDisplayName = QTUIUtils.GetPlayerDisplayName(authorId)
+    local authorDisplayName = QMUIUtils.GetPlayerDisplayName(authorId)
 
     -- Build delete button if user has permission
     local headerChildren = {
@@ -537,7 +537,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
             text = "By: " .. authorDisplayName .. " at " .. displayTimestamp,
             width = "100%",
             height = 20,
-            classes = {"QTLabel", "QTBase"},
+            classes = {"QMLabel", "QMBase"},
             textAlignment = "left"
         }
     }
@@ -550,10 +550,10 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
             halign = "right",
             valign = "center",
             click = function()
-                QTUIUtils.ShowDeleteConfirmation("note", "this note", function()
+                QMUIUtils.ShowDeleteConfirmation("note", "this note", function()
                     quest:RemoveNote(note.id)
-                    if QTQuestManagerWindow.instance then
-                        QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
+                    if QMQuestManagerWindow.instance then
+                        QMQuestManagerWindow.instance:FireEventTree("refreshNotes")
                     end
                 end)
             end
@@ -580,7 +580,7 @@ function QTQuestManagerWindow.CreateNoteItem(questManager, quest, note)
                 text = content,
                 width = "100%",
                 height = "auto",
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 textAlignment = "left",
                 textWrap = true,
                 vmargin = 5,
@@ -657,14 +657,14 @@ local DragObjective = function(element, target)
     end
 
     -- Refresh UI to show new order
-    if QTQuestManagerWindow.instance then
-        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+    if QMQuestManagerWindow.instance then
+        QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
     end
 end
 
 --- Creates a drag handle for an objective that serves as both drag source and drop target
---- @param quest QTQuest The quest object
---- @param objective QTQuestObjective The objective this handle belongs to
+--- @param quest QMQuest The quest object
+--- @param objective QMQuestObjective The objective this handle belongs to
 --- @return table panel The drag handle panel
 local CreateObjectiveDragHandle = function(quest, objective)
     return gui.Panel{
@@ -691,13 +691,13 @@ local CreateObjectiveDragHandle = function(quest, objective)
 end
 
 --- Creates a single objective item with in-place editing
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object
---- @param objective QTQuestObjective The objective to display
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object
+--- @param objective QMQuestObjective The objective to display
 --- @return table panel The objective item panel
-function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
+function QMQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
     local title = objective:GetTitle() or ""
-    local status = objective:GetStatus() or QTQuestObjective.STATUS.NOT_STARTED
+    local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
     local description = objective:GetDescription() or ""
 
     -- Status display formatting
@@ -707,11 +707,11 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
 
     -- Status options for dropdown (using same pattern as main quest tab)
     local statusOptions = {
-        {id = QTQuestObjective.STATUS.NOT_STARTED, text = "Not Started"},
-        {id = QTQuestObjective.STATUS.ACTIVE, text = "Active"},
-        {id = QTQuestObjective.STATUS.COMPLETED, text = "Completed"},
-        {id = QTQuestObjective.STATUS.FAILED, text = "Failed"},
-        {id = QTQuestObjective.STATUS.ON_HOLD, text = "On Hold"}
+        {id = QMQuestObjective.STATUS.NOT_STARTED, text = "Not Started"},
+        {id = QMQuestObjective.STATUS.ACTIVE, text = "Active"},
+        {id = QMQuestObjective.STATUS.COMPLETED, text = "Completed"},
+        {id = QMQuestObjective.STATUS.FAILED, text = "Failed"},
+        {id = QMQuestObjective.STATUS.ON_HOLD, text = "On Hold"}
     }
 
     -- Drag handle for reordering (always visible)
@@ -728,10 +728,10 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
             hmargin = 5,
             vmargin = 5,
             click = function()
-                QTUIUtils.ShowDeleteConfirmation("objective", title, function()
+                QMUIUtils.ShowDeleteConfirmation("objective", title, function()
                     quest:RemoveObjective(objective.id)
-                    if QTQuestManagerWindow.instance then
-                        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+                    if QMQuestManagerWindow.instance then
+                        QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                     end
                 end)
             end
@@ -761,7 +761,7 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                     gui.Input {
                         width = "50%",
                         height = 25,
-                        classes = {"QTInput", "QTBase"},
+                        classes = {"QMInput", "QMBase"},
                         text = title,
                         placeholderText = "Enter objective title...",
                         editlag = 0.25,
@@ -777,7 +777,7 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                         width = "40%",
                         height = 25,
                         hmargin = 10,
-                        classes = {"QTDropdown", "QTBase"},
+                        classes = {"QMDropdown", "QMBase"},
                         options = statusOptions,
                         idChosen = status,
                         change = function(element)
@@ -787,8 +787,8 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                                 -- Update quest modified timestamp
                                 quest:UpdateProperties({}, "Updated objective status")
                                 -- Refresh to update styling
-                                if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+                                if QMQuestManagerWindow.instance then
+                                    QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                                 end
                             end
                         end
@@ -803,7 +803,7 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
             gui.Input {
                 width = "96%",
                 height = 80,
-                classes = {"QTInput", "QTBase"},
+                classes = {"QMInput", "QMBase"},
                 text = description,
                 placeholderText = "Enter objective description...",
                 lineType = "MultiLine",
@@ -821,9 +821,9 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
 end
 
 --- Shows the add note dialog
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object
-function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object
+function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
     local noteContent = ""
 
     local addNoteWindow = gui.Panel{
@@ -838,7 +838,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
         flow = "vertical",
         hpad = 20,
         vpad = 20,
-        styles = QTUIUtils.GetDialogStyles(),
+        styles = QMUIUtils.GetDialogStyles(),
 
         children = {
             -- Title
@@ -847,7 +847,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                 width = "100%",
                 height = 30,
                 fontSize = "24",
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 textAlignment = "center",
                 halign = "center"
             },
@@ -856,7 +856,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
             gui.Input{
                 width = "95%",
                 height = 150,
-                classes = {"QTInput", "QTBase"},
+                classes = {"QMInput", "QMBase"},
                 textAlignment = "topleft",
                 placeholderText = "Enter your note here...",
                 lineType = "MultiLine",
@@ -880,7 +880,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                         width = 120,
                         height = 40,
                         hmargin = 20,
-                        classes = {"QTButton", "QTBase"},
+                        classes = {"QMButton", "QMBase"},
                         click = function(element)
                             gui.CloseModal()
                         end
@@ -891,12 +891,12 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                         width = 120,
                         height = 40,
                         hmargin = 20,
-                        classes = {"QTButton", "QTBase"},
+                        classes = {"QMButton", "QMBase"},
                         click = function(element)
                             if noteContent and noteContent:trim() ~= "" then
                                 quest:AddNote(noteContent, dmhub.userid)
-                                if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
+                                if QMQuestManagerWindow.instance then
+                                    QMQuestManagerWindow.instance:FireEventTree("refreshNotes")
                                 end
                             end
                             gui.CloseModal()
@@ -916,15 +916,15 @@ end
 
 
 --- Builds the quest form for the Quest tab
---- @param questManager QTQuestManager The quest manager instance
---- @param quest QTQuest The quest object to display/edit
+--- @param questManager QMQuestManager The quest manager instance
+--- @param quest QMQuest The quest object to display/edit
 --- @return table panel The quest form panel
-function QTQuestManagerWindow._buildQuestForm(questManager, quest)
+function QMQuestManagerWindow._buildQuestForm(questManager, quest)
 
     -- Create form field elements
     local titleField = gui.Input{
         width = "100%",
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         text = quest:GetTitle() or "New Quest",
         placeholderText = "Enter quest title...",
         lineType = "Single",
@@ -939,7 +939,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local descriptionField = gui.Input{
         width = "100%",
         height = 100,
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
         lineType = "MultiLine",
@@ -954,7 +954,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local questGiverField = gui.Input{
         width = "100%",
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         text = quest:GetQuestGiver() or "",
         placeholderText = "Who gave this quest?",
         lineType = "Single",
@@ -968,7 +968,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local locationField = gui.Input{
         width = "100%",
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         text = quest:GetLocation() or "",
         placeholderText = "Where does this quest take place?",
         lineType = "Single",
@@ -982,7 +982,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     local rewardsField = gui.Input{
         width = "100%",
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         text = quest:GetRewards() or "",
         placeholderText = "What rewards does this quest offer?",
         lineType = "Single",
@@ -996,36 +996,36 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
 
     -- Category options
     local categoryOptions = {
-        {id = QTQuest.CATEGORY.MAIN, text = "Main Quest"},
-        {id = QTQuest.CATEGORY.SIDE, text = "Side Quest"},
-        {id = QTQuest.CATEGORY.PERSONAL, text = "Personal Quest"},
-        {id = QTQuest.CATEGORY.FACTION, text = "Faction Quest"},
-        {id = QTQuest.CATEGORY.TUTORIAL, text = "Tutorial"}
+        {id = QMQuest.CATEGORY.MAIN, text = "Main Quest"},
+        {id = QMQuest.CATEGORY.SIDE, text = "Side Quest"},
+        {id = QMQuest.CATEGORY.PERSONAL, text = "Personal Quest"},
+        {id = QMQuest.CATEGORY.FACTION, text = "Faction Quest"},
+        {id = QMQuest.CATEGORY.TUTORIAL, text = "Tutorial"}
     }
 
     -- Priority options
     local priorityOptions = {
-        {id = QTQuest.PRIORITY.HIGH, text = "High Priority"},
-        {id = QTQuest.PRIORITY.MEDIUM, text = "Medium Priority"},
-        {id = QTQuest.PRIORITY.LOW, text = "Low Priority"}
+        {id = QMQuest.PRIORITY.HIGH, text = "High Priority"},
+        {id = QMQuest.PRIORITY.MEDIUM, text = "Medium Priority"},
+        {id = QMQuest.PRIORITY.LOW, text = "Low Priority"}
     }
 
     -- Status options
     local statusOptions = {
-        {id = QTQuest.STATUS.NOT_STARTED, text = "Not Started"},
-        {id = QTQuest.STATUS.ACTIVE, text = "Active"},
-        {id = QTQuest.STATUS.COMPLETED, text = "Completed"},
-        {id = QTQuest.STATUS.FAILED, text = "Failed"},
-        {id = QTQuest.STATUS.ON_HOLD, text = "On Hold"}
+        {id = QMQuest.STATUS.NOT_STARTED, text = "Not Started"},
+        {id = QMQuest.STATUS.ACTIVE, text = "Active"},
+        {id = QMQuest.STATUS.COMPLETED, text = "Completed"},
+        {id = QMQuest.STATUS.FAILED, text = "Failed"},
+        {id = QMQuest.STATUS.ON_HOLD, text = "On Hold"}
     }
 
     -- Create dropdown elements
     local categoryDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        classes = {"QTDropdown", "QTBase"},
+        classes = {"QMDropdown", "QMBase"},
         options = categoryOptions,
-        idChosen = quest:GetCategory() or QTQuest.CATEGORY.MAIN,
+        idChosen = quest:GetCategory() or QMQuest.CATEGORY.MAIN,
         change = function(element)
             local newCategory = element.idChosen
             if quest:GetCategory() ~= newCategory then
@@ -1037,9 +1037,9 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local priorityDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        classes = {"QTDropdown", "QTBase"},
+        classes = {"QMDropdown", "QMBase"},
         options = priorityOptions,
-        idChosen = quest:GetPriority() or QTQuest.PRIORITY.MEDIUM,
+        idChosen = quest:GetPriority() or QMQuest.PRIORITY.MEDIUM,
         change = function(element)
             local newPriority = element.idChosen
             if quest:GetPriority() ~= newPriority then
@@ -1051,9 +1051,9 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
     local statusDropdown = gui.Dropdown{
         width = "80%",
         halign = "left",
-        classes = {"QTDropdown", "QTBase"},
+        classes = {"QMDropdown", "QMBase"},
         options = statusOptions,
-        idChosen = quest:GetStatus() or QTQuest.STATUS.NOT_STARTED,
+        idChosen = quest:GetStatus() or QMQuest.STATUS.NOT_STARTED,
         change = function(element)
             local newStatus = element.idChosen
             if quest:GetStatus() ~= newStatus then
@@ -1067,7 +1067,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         width = 160,
         halign = "left",
         valign = "center",
-        classes = {"QTCheck", "QTBase"},
+        classes = {"QMCheck", "QMBase"},
         value = quest:GetRewardsClaimed() or false,
         change = function(element)
             if quest:GetRewardsClaimed() ~= element.value then
@@ -1081,7 +1081,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         width = 160,
         halign = "left",
         valign = "center",
-        classes = {"QTCheck", "QTBase"},
+        classes = {"QMCheck", "QMBase"},
         value = quest:GetVisibleToPlayers() or (not dmhub.isDM),
         change = function(element)
             if quest:GetVisibleToPlayers() ~= element.value then
@@ -1097,7 +1097,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
         height = "90%",
         flow = "vertical",
         valign = "top",
-        styles = QTUIUtils.GetDialogStyles(),
+        styles = QMUIUtils.GetDialogStyles(),
         hpad = 20,
         vpad = 10,
         children = {
@@ -1110,7 +1110,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 children = {
                     gui.Label{
                         text = "Quest Title:",
-                        classes = {"QTLabel", "QTBase"},
+                        classes = {"QMLabel", "QMBase"},
                         width = "100%",
                         height = 20
                     },
@@ -1145,7 +1145,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 children = {
                     gui.Label{
                         text = "Description:",
-                        classes = {"QTLabel", "QTBase"},
+                        classes = {"QMLabel", "QMBase"},
                         width = "100%",
                         height = 20
                     },
@@ -1168,7 +1168,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Category:",
-                                classes = {"QTLabel", "QTBase"},
+                                classes = {"QMLabel", "QMBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -1183,7 +1183,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Priority:",
-                                classes = {"QTLabel", "QTBase"},
+                                classes = {"QMLabel", "QMBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -1198,7 +1198,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             gui.Label{
                                 text = "Status:",
-                                classes = {"QTLabel", "QTBase"},
+                                classes = {"QMLabel", "QMBase"},
                                 width = "100%",
                                 height = 20
                             },
@@ -1217,7 +1217,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 children = {
                     gui.Label{
                         text = "Quest Giver:",
-                        classes = {"QTLabel", "QTBase"},
+                        classes = {"QMLabel", "QMBase"},
                         width = "100%",
                         height = 20
                     },
@@ -1234,7 +1234,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 children = {
                     gui.Label{
                         text = "Location:",
-                        classes = {"QTLabel", "QTBase"},
+                        classes = {"QMLabel", "QMBase"},
                         width = "100%",
                         height = 20
                     },
@@ -1251,7 +1251,7 @@ function QTQuestManagerWindow._buildQuestForm(questManager, quest)
                 children = {
                     gui.Label{
                         text = "Rewards:",
-                        classes = {"QTLabel", "QTBase"},
+                        classes = {"QMLabel", "QMBase"},
                         width = "100%",
                         height = 20
                     },

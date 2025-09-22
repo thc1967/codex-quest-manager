@@ -2,15 +2,15 @@ local mod = dmhub.GetModLoading()
 
 --- Shared UI utilities for Quest Manager including dialogs and styles
 --- Provides consistent dialog components and styling across all Quest Manager UI
---- @class QTUIUtils
-QTUIUtils = RegisterGameType("QTUIUtils")
+--- @class QMUIUtils
+QMUIUtils = RegisterGameType("QMUIUtils")
 
 --- Shows a standardized delete confirmation dialog
 --- @param itemType string The type of item being deleted ("quest", "note", "objective")
 --- @param itemTitle string The display name/title of the item being deleted
 --- @param onConfirm function Callback function to execute if user confirms deletion
 --- @param onCancel function Optional callback function to execute if user cancels (default: just close dialog)
-function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCancel)
+function QMUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCancel)
     local displayText = "Are you sure you want to delete " .. itemType .. " \"" .. (itemTitle or "Untitled") .. "\"?"
 
     local confirmationWindow = gui.Panel{
@@ -25,7 +25,7 @@ function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCanc
         flow = "vertical",
         hpad = 20,
         vpad = 20,
-        styles = QTUIUtils.GetDialogStyles(),
+        styles = QMUIUtils.GetDialogStyles(),
 
         children = {
             -- Header
@@ -34,7 +34,7 @@ function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCanc
                 fontSize = 24,
                 width = "100%",
                 height = 30,
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 textAlignment = "center",
                 halign = "center"
             },
@@ -44,7 +44,7 @@ function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCanc
                 text = displayText,
                 width = "100%",
                 height = 80,
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 textAlignment = "center",
                 textWrap = true,
                 halign = "center",
@@ -65,7 +65,7 @@ function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCanc
                         width = 120,
                         height = 40,
                         hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
+                        classes = {"QMButton", "QMBase"},
                         click = function(element)
                             gui.CloseModal()
                             if onCancel then
@@ -79,7 +79,7 @@ function QTUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCanc
                         width = 120,
                         height = 40,
                         hmargin = 10,
-                        classes = {"QTButton", "QTBase"},
+                        classes = {"QMButton", "QMBase"},
                         click = function(element)
                             gui.CloseModal()
                             if onConfirm then
@@ -104,46 +104,46 @@ end
 
 --- Gets the standardized styling configuration for Quest Manager dialogs
 --- Provides consistent styling across all Quest Manager UI components
---- @return table styles Array of GUI styles using QTBase inheritance pattern
-function QTUIUtils.GetDialogStyles()
+--- @return table styles Array of GUI styles using QMBase inheritance pattern
+function QMUIUtils.GetDialogStyles()
     return {
-        -- QTBase: Foundation style for all Quest Manager controls
+        -- QMBase: Foundation style for all Quest Manager controls
         gui.Style{
-            selectors = {"QTBase"},
+            selectors = {"QMBase"},
             fontSize = 18,
             fontFace = "Berling",
             color = Styles.textColor,
             height = 40,
         },
 
-        -- QT Control Types: Inherit from QTBase, add specific properties
+        -- QM Control Types: Inherit from QMBase, add specific properties
         gui.Style{
-            selectors = {"QTLabel", "QTBase"},
+            selectors = {"QMLabel", "QMBase"},
             bold = true,
             textAlignment = "left"
         },
         gui.Style{
-            selectors = {"QTInput", "QTBase"},
+            selectors = {"QMInput", "QMBase"},
             bgcolor = Styles.backgroundColor,
             borderWidth = 1,
             borderColor = Styles.textColor
         },
         gui.Style{
-            selectors = {"QTDropdown", "QTBase"},
+            selectors = {"QMDropdown", "QMBase"},
             bgcolor = Styles.backgroundColor,
             borderWidth = 1,
             borderColor = Styles.textColor
         },
         gui.Style{
-            selectors = {"QTCheck", "QTBase"},
-            -- Inherits all QTBase properties
+            selectors = {"QMCheck", "QMBase"},
+            -- Inherits all QMBase properties
         },
         gui.Style{
-            selectors = {"QTButton", "QTBase"},
+            selectors = {"QMButton", "QMBase"},
             fontSize = 22,
             textAlignment = "center",
             bold = true,
-            height = 35  -- Override QTBase height for buttons
+            height = 35  -- Override QMBase height for buttons
         },
 
         -- Objective drag handle styles
@@ -174,7 +174,7 @@ end
 --- Gets player display name with color formatting from user ID
 --- @param userId string The user ID to look up
 --- @return string coloredDisplayName The player's display name with HTML color tags, or "{unknown}" if not found
-function QTUIUtils.GetPlayerDisplayName(userId)
+function QMUIUtils.GetPlayerDisplayName(userId)
     if not userId or userId == "" then
         return "{unknown}"
     end
@@ -198,7 +198,7 @@ end
 --- @param inputOptions table Options for the input field (text, placeholderText, lineType, etc.)
 --- @param panelOptions table Optional panel options (width, height, vmargin, etc.)
 --- @return table panel The complete labeled input panel
-function QTUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
+function QMUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
     -- Default panel options
     local panelDefaults = {
         width = "95%",
@@ -215,7 +215,7 @@ function QTUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
     -- Default input options
     local inputDefaults = {
         width = "100%",
-        classes = {"QTInput", "QTBase"},
+        classes = {"QMInput", "QMBase"},
         lineType = "Single",
         editlag = 0.25
     }
@@ -239,7 +239,7 @@ function QTUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
         children = {
             gui.Label{
                 text = labelText,
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 width = "100%",
                 height = 20
             },
@@ -253,7 +253,7 @@ end
 --- @param dropdownOptions table Options for the dropdown (options, idChosen, change, etc.)
 --- @param panelOptions table Optional panel options (width, height, vmargin, etc.)
 --- @return table panel The complete labeled dropdown panel
-function QTUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOptions)
+function QMUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOptions)
     -- Default panel options
     local panelDefaults = {
         width = "33%",
@@ -271,7 +271,7 @@ function QTUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOption
     local dropdownDefaults = {
         width = "80%",
         halign = "left",
-        classes = {"QTDropdown", "QTBase"}
+        classes = {"QMDropdown", "QMBase"}
     }
 
     -- Merge dropdown options
@@ -287,7 +287,7 @@ function QTUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOption
         children = {
             gui.Label{
                 text = labelText,
-                classes = {"QTLabel", "QTBase"},
+                classes = {"QMLabel", "QMBase"},
                 width = "100%",
                 height = 20
             },
@@ -300,7 +300,7 @@ end
 --- @param checkboxOptions table Options for the checkbox (text, value, change, etc.)
 --- @param panelOptions table Optional panel options (width, height, etc.)
 --- @return table panel The complete labeled checkbox panel
-function QTUIUtils.CreateLabeledCheckbox(checkboxOptions, panelOptions)
+function QMUIUtils.CreateLabeledCheckbox(checkboxOptions, panelOptions)
     -- Default panel options
     local panelDefaults = {
         width = "25%",
@@ -319,7 +319,7 @@ function QTUIUtils.CreateLabeledCheckbox(checkboxOptions, panelOptions)
         width = 160,
         halign = "left",
         valign = "center",
-        classes = {"QTCheck", "QTBase"}
+        classes = {"QMCheck", "QMBase"}
     }
 
     -- Merge checkbox options
