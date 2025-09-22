@@ -191,11 +191,11 @@ end
 --- Gets the highest order number among all objectives for this quest
 --- @return number maxOrder The highest order number, or 0 if no objectives exist
 function QTQuest:GetMaxObjectiveOrder()
-    local objectiveIds = self._manager:GetQuestField(self.id, "objectiveIds") or {}
+    local objectivesData = self._manager:GetQuestObjectives(self.id)
     local maxOrder = 0
 
-    for _, objectiveId in ipairs(objectiveIds) do
-        local objective = QTQuestObjective:new(self._manager, objectiveId)
+    for objectiveId, _ in pairs(objectivesData) do
+        local objective = QTQuestObjective:new(self._manager, self.id, objectiveId)
         local order = objective:GetOrder()
         if order > maxOrder then
             maxOrder = order
@@ -208,10 +208,10 @@ end
 --- Gets all objectives for this quest sorted by order (lowest to highest)
 --- @return table objectives Array of QTQuestObjective instances sorted by order
 function QTQuest:GetObjectives()
-    local objectiveIds = self._manager:GetQuestField(self.id, "objectiveIds") or {}
+    local objectivesData = self._manager:GetQuestObjectives(self.id)
     local objectives = {}
-    for _, objectiveId in ipairs(objectiveIds) do
-        table.insert(objectives, QTQuestObjective:new(self._manager, objectiveId))
+    for objectiveId, _ in pairs(objectivesData) do
+        table.insert(objectives, QTQuestObjective:new(self._manager, self.id, objectiveId))
     end
 
     -- Sort objectives by order field (lowest to highest)
@@ -226,7 +226,7 @@ end
 --- @param description string The objective description
 --- @return QTQuestObjective objective The newly created objective
 function QTQuest:AddObjective(description)
-    local objective = QTQuestObjective:new(self._manager)
+    local objective = QTQuestObjective:new(self._manager, self.id)
 
     -- Get the next order number by finding the highest existing order and adding 1
     local nextOrder = self:GetMaxObjectiveOrder() + 1
@@ -240,23 +240,22 @@ function QTQuest:AddObjective(description)
         true  -- Apply defaults
     )
 
-    self._manager:AddObjectiveToQuest(self.id, objective.id)
     return objective
 end
 
 --- Removes an objective from this quest
 --- @param objectiveId string The GUID of the objective to remove
 function QTQuest:RemoveObjective(objectiveId)
-    self._manager:RemoveObjectiveFromQuest(self.id, objectiveId)
+    self._manager:DeleteQuestObjective(self.id, objectiveId)
 end
 
 --- Gets all notes for this quest sorted by timestamp (newest first)
 --- @return table notes Array of QTQuestNote instances
 function QTQuest:GetNotes()
-    local noteIds = self._manager:GetQuestField(self.id, "noteIds") or {}
+    local notesData = self._manager:GetQuestNotes(self.id)
     local notes = {}
-    for _, noteId in ipairs(noteIds) do
-        table.insert(notes, QTQuestNote:new(self._manager, noteId))
+    for noteId, _ in pairs(notesData) do
+        table.insert(notes, QTQuestNote:new(self._manager, self.id, noteId))
     end
 
     -- Sort by timestamp descending (newest first)
@@ -274,7 +273,7 @@ end
 --- @param authorId string The Codex player ID of the author
 --- @return QTQuestNote note The newly created note
 function QTQuest:AddNote(content, authorId)
-    local note = QTQuestNote:new(self._manager)
+    local note = QTQuestNote:new(self._manager, self.id)
     note:UpdateProperties(
         {
             content = content,
@@ -284,14 +283,13 @@ function QTQuest:AddNote(content, authorId)
         "Added note to quest"
     )
 
-    self._manager:AddNoteToQuest(self.id, note.id)
     return note
 end
 
 --- Removes a note from this quest
 --- @param noteId string The GUID of the note to remove
 function QTQuest:RemoveNote(noteId)
-    self._manager:RemoveNoteFromQuest(self.id, noteId)
+    self._manager:DeleteQuestNote(self.id, noteId)
 end
 
 --- Updates multiple quest properties in a single document transaction

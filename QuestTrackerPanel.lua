@@ -81,11 +81,23 @@ function QTQuestTrackerPanel:_buildHeaderPanel()
             gui.Label {
                 text = "Active Quests (" .. questCount .. ")",
                 classes = {"header-title"},
-                width = "75%"
+                width = "60%"
+            },
+            gui.Button {
+                text = "DEBUG",
+                width = 60,
+                height = 30,
+                halign = "right",
+                valign = "center",
+                hmargin = 5,
+                linger = function(element)
+                    gui.Tooltip("Debug document contents")(element)
+                end,
+                click = function(element)
+                    self:_debugDocument()
+                end
             },
             gui.AddButton {
-                -- width = "25%",
-                -- hmargin = 15,
                 halign = "right",
                 valign = "center",
                 linger = function(element)
@@ -736,4 +748,10 @@ function QTQuestTrackerPanel:_refreshPanelContent(element)
     local headerPanel = self:_buildHeaderPanel()
     local contentPanel = self:_buildContentPanel()
     element.children = {headerPanel, contentPanel}
+end
+
+--- Debug method to print the raw document contents from persistence
+function QTQuestTrackerPanel:_debugDocument()
+    local doc = self.questManager.mod:GetDocumentSnapshot("QTQuestLog")
+    print("THC:: PERSISTED::", json(doc.data))
 end

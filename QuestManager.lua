@@ -27,12 +27,10 @@ end
 --- Initializes the quest log document with default structure
 function QTQuestManager:_initializeDocument()
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
+    if not doc.data or type(doc.data) ~= "table" then
         doc:BeginChange()
         doc.data = {
             quests = {},
-            objectives = {},
-            notes = {},
             metadata = {
                 campaignName = "Default Campaign",
                 version = 1,
@@ -207,53 +205,13 @@ function QTQuestManager:DeleteQuest(questId)
 
     doc:BeginChange()
 
-    -- Remove associated objectives and their notes
-    local objectiveIds = doc.data.quests[questId].objectiveIds or {}
-    for _, objectiveId in ipairs(objectiveIds) do
-        self:_deleteObjectiveData(doc, objectiveId)
-    end
-
-    -- Remove quest notes
-    local noteIds = doc.data.quests[questId].noteIds or {}
-
-    if doc.data.notes then
-        for _, noteId in ipairs(noteIds) do
-            doc.data.notes[noteId] = nil
-        end
-    end
-
-    -- Remove the quest itself
+    -- Remove the quest itself (includes all objectives and notes as child data)
     doc.data.quests[questId] = nil
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
     end
 
     doc:CompleteChange("Deleted quest", {undoable = true})
-end
-
---- Helper function to delete objective data
---- @param doc table The document snapshot
---- @param objectiveId string The GUID of the objective to delete
-function QTQuestManager:_deleteObjectiveData(doc, objectiveId)
-    if not doc.data.objectives or not doc.data.objectives[objectiveId] then
-        return
-    end
-
-    -- Remove objective notes
-    local playerNoteIds = doc.data.objectives[objectiveId].playerNoteIds or {}
-    local directorNoteIds = doc.data.objectives[objectiveId].directorNoteIds or {}
-
-    if doc.data.notes then
-        for _, noteId in ipairs(playerNoteIds) do
-            doc.data.notes[noteId] = nil
-        end
-        for _, noteId in ipairs(directorNoteIds) do
-            doc.data.notes[noteId] = nil
-        end
-    end
-
-    -- Remove the objective
-    doc.data.objectives[objectiveId] = nil
 end
 
 --- Gets a field value from a quest
@@ -274,11 +232,19 @@ end
 --- @param value any The new field value
 function QTQuestManager:UpdateQuestField(questId, field, value)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data.quests[questId] then
+
+    doc:BeginChange()
+    -- Ensure document structure exists
+    if not doc.data or type(doc.data) ~= "table" then
+        doc.data = {}
+    end
+    if not doc.data.quests or type(doc.data.quests) ~= "table" then
+        doc.data.quests = {}
+    end
+    if not doc.data.quests[questId] or type(doc.data.quests[questId]) ~= "table" then
         doc.data.quests[questId] = {}
     end
 
-    doc:BeginChange()
     doc.data.quests[questId][field] = value
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -315,57 +281,96 @@ function QTQuestManager:UpdateQuestProperties(questId, properties, changeDescrip
     doc:CompleteChange(changeDescription or "Update quest properties", {undoable = true})
 end
 
---- Gets a field value from an objective
+--- Gets all objectives for a quest
+--- @param questId string The GUID of the quest
+--- @return table objectives Table of objectives keyed by objective ID
+function QTQuestManager:GetQuestObjectives(questId)
+    local doc = self.mod:GetDocumentSnapshot(self.documentName)
+    if doc.data and doc.data.quests and doc.data.quests[questId] and doc.data.quests[questId].objectives then
+        return doc.data.quests[questId].objectives
+    end
+    return {}
+end
+
+--- Gets all notes for a quest
+--- @param questId string The GUID of the quest
+--- @return table notes Table of notes keyed by note ID
+function QTQuestManager:GetQuestNotes(questId)
+    local doc = self.mod:GetDocumentSnapshot(self.documentName)
+    if doc.data and doc.data.quests and doc.data.quests[questId] and doc.data.quests[questId].notes then
+        return doc.data.quests[questId].notes
+    end
+    return {}
+end
+
+--- Gets a field value from a quest objective
+--- @param questId string The GUID of the quest
 --- @param objectiveId string The GUID of the objective
 --- @param field string The field name to retrieve
 --- @return any value The field value or nil
-function QTQuestManager:GetObjectiveField(objectiveId, field)
+function QTQuestManager:GetQuestObjectiveField(questId, objectiveId, field)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if doc.data and doc.data.objectives and doc.data.objectives[objectiveId] then
-        return doc.data.objectives[objectiveId][field]
+    if doc.data and doc.data.quests and doc.data.quests[questId] and
+       doc.data.quests[questId].objectives and doc.data.quests[questId].objectives[objectiveId] then
+        return doc.data.quests[questId].objectives[objectiveId][field]
     end
     return nil
 end
 
---- Updates a single field in an objective
+--- Updates a field value in a quest objective
+--- @param questId string The GUID of the quest
 --- @param objectiveId string The GUID of the objective
 --- @param field string The field name to update
 --- @param value any The new field value
-function QTQuestManager:UpdateObjectiveField(objectiveId, field, value)
+function QTQuestManager:UpdateQuestObjectiveField(questId, objectiveId, field, value)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data.objectives[objectiveId] then
-        doc.data.objectives[objectiveId] = {}
-    end
-
-    doc:BeginChange()
-    doc.data.objectives[objectiveId][field] = value
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-    doc:CompleteChange("Update objective " .. field, {undoable = true})
-end
-
---- Updates multiple fields in an objective
---- @param objectiveId string The GUID of the objective
---- @param properties table Key-value pairs of properties to update
---- @param changeDescription string Optional description for the change
-function QTQuestManager:UpdateObjectiveProperties(objectiveId, properties, changeDescription)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
         return
     end
 
-    if not doc.data.objectives then
-        doc.data.objectives = {}
+    doc:BeginChange()
+
+    -- Ensure objectives table exists
+    if not doc.data.quests[questId].objectives then
+        doc.data.quests[questId].objectives = {}
     end
-    if not doc.data.objectives[objectiveId] then
-        doc.data.objectives[objectiveId] = {}
+    if not doc.data.quests[questId].objectives[objectiveId] then
+        doc.data.quests[questId].objectives[objectiveId] = {}
+    end
+
+    -- Update the field
+    doc.data.quests[questId].objectives[objectiveId][field] = value
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
+
+    doc:CompleteChange("Update objective " .. field, {undoable = true})
+end
+
+--- Updates multiple properties in a quest objective
+--- @param questId string The GUID of the quest
+--- @param objectiveId string The GUID of the objective
+--- @param properties table Key-value pairs of properties to update
+--- @param changeDescription string Optional description for the change
+function QTQuestManager:UpdateQuestObjective(questId, objectiveId, properties, changeDescription)
+    local doc = self.mod:GetDocumentSnapshot(self.documentName)
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
+        return
     end
 
     doc:BeginChange()
 
+    -- Ensure objectives table exists
+    if not doc.data.quests[questId].objectives then
+        doc.data.quests[questId].objectives = {}
+    end
+    if not doc.data.quests[questId].objectives[objectiveId] then
+        doc.data.quests[questId].objectives[objectiveId] = {}
+    end
+
+    -- Update all properties
     for field, value in pairs(properties) do
-        doc.data.objectives[objectiveId][field] = value
+        doc.data.quests[questId].objectives[objectiveId][field] = value
     end
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -374,57 +379,96 @@ function QTQuestManager:UpdateObjectiveProperties(objectiveId, properties, chang
     doc:CompleteChange(changeDescription or "Update objective properties", {undoable = true})
 end
 
---- Gets a field value from a note
+--- Deletes an objective from a quest
+--- @param questId string The GUID of the quest
+--- @param objectiveId string The GUID of the objective to delete
+function QTQuestManager:DeleteQuestObjective(questId, objectiveId)
+    local doc = self.mod:GetDocumentSnapshot(self.documentName)
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
+        return
+    end
+
+    doc:BeginChange()
+
+    -- Remove the objective
+    if doc.data.quests[questId].objectives then
+        doc.data.quests[questId].objectives[objectiveId] = nil
+    end
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
+
+    doc:CompleteChange("Removed objective from quest", {undoable = true})
+end
+
+--- Gets a field value from a quest note
+--- @param questId string The GUID of the quest
 --- @param noteId string The GUID of the note
 --- @param field string The field name to retrieve
 --- @return any value The field value or nil
-function QTQuestManager:GetNoteField(noteId, field)
+function QTQuestManager:GetQuestNoteField(questId, noteId, field)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if doc.data and doc.data.notes and doc.data.notes[noteId] then
-        return doc.data.notes[noteId][field]
+    if doc.data and doc.data.quests and doc.data.quests[questId] and
+       doc.data.quests[questId].notes and doc.data.quests[questId].notes[noteId] then
+        return doc.data.quests[questId].notes[noteId][field]
     end
     return nil
 end
 
---- Updates a single field in a note
+--- Updates a field value in a quest note
+--- @param questId string The GUID of the quest
 --- @param noteId string The GUID of the note
 --- @param field string The field name to update
 --- @param value any The new field value
-function QTQuestManager:UpdateNoteField(noteId, field, value)
+function QTQuestManager:UpdateQuestNoteField(questId, noteId, field, value)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data.notes[noteId] then
-        doc.data.notes[noteId] = {}
-    end
-
-    doc:BeginChange()
-    doc.data.notes[noteId][field] = value
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-    doc:CompleteChange("Update note " .. field, {undoable = true})
-end
-
---- Updates multiple fields in a note
---- @param noteId string The GUID of the note
---- @param properties table Key-value pairs of properties to update
---- @param changeDescription string Optional description for the change
-function QTQuestManager:UpdateNoteProperties(noteId, properties, changeDescription)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
         return
     end
 
-    if not doc.data.notes then
-        doc.data.notes = {}
+    doc:BeginChange()
+
+    -- Ensure notes table exists
+    if not doc.data.quests[questId].notes then
+        doc.data.quests[questId].notes = {}
     end
-    if not doc.data.notes[noteId] then
-        doc.data.notes[noteId] = {}
+    if not doc.data.quests[questId].notes[noteId] then
+        doc.data.quests[questId].notes[noteId] = {}
+    end
+
+    -- Update the field
+    doc.data.quests[questId].notes[noteId][field] = value
+    if doc.data.metadata then
+        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    end
+
+    doc:CompleteChange("Update note " .. field, {undoable = true})
+end
+
+--- Updates multiple properties in a quest note
+--- @param questId string The GUID of the quest
+--- @param noteId string The GUID of the note
+--- @param properties table Key-value pairs of properties to update
+--- @param changeDescription string Optional description for the change
+function QTQuestManager:UpdateQuestNote(questId, noteId, properties, changeDescription)
+    local doc = self.mod:GetDocumentSnapshot(self.documentName)
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
+        return
     end
 
     doc:BeginChange()
 
+    -- Ensure notes table exists
+    if not doc.data.quests[questId].notes then
+        doc.data.quests[questId].notes = {}
+    end
+    if not doc.data.quests[questId].notes[noteId] then
+        doc.data.quests[questId].notes[noteId] = {}
+    end
+
+    -- Update all properties
     for field, value in pairs(properties) do
-        doc.data.notes[noteId][field] = value
+        doc.data.quests[questId].notes[noteId][field] = value
     end
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -433,202 +477,26 @@ function QTQuestManager:UpdateNoteProperties(noteId, properties, changeDescripti
     doc:CompleteChange(changeDescription or "Update note properties", {undoable = true})
 end
 
---- Adds an objective to a quest
+--- Deletes a note from a quest
 --- @param questId string The GUID of the quest
---- @param objectiveId string The GUID of the objective to add
-function QTQuestManager:AddObjectiveToQuest(questId, objectiveId)
+--- @param noteId string The GUID of the note to delete
+function QTQuestManager:DeleteQuestNote(questId, noteId)
     local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
+    if not doc.data or not doc.data.quests or not doc.data.quests[questId] then
         return
     end
 
     doc:BeginChange()
 
-    -- Ensure quest exists and has objective list
-    if not doc.data.quests then
-        doc.data.quests = {}
-    end
-    if not doc.data.quests[questId] then
-        doc.data.quests[questId] = {}
-    end
-    if not doc.data.quests[questId].objectiveIds then
-        doc.data.quests[questId].objectiveIds = {}
-    end
-
-    -- Add objective ID to quest
-    table.insert(doc.data.quests[questId].objectiveIds, objectiveId)
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    doc:CompleteChange("Added objective to quest", {undoable = true})
-end
-
---- Removes an objective from a quest
---- @param questId string The GUID of the quest
---- @param objectiveId string The GUID of the objective to remove
-function QTQuestManager:RemoveObjectiveFromQuest(questId, objectiveId)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
-        return
-    end
-
-    doc:BeginChange()
-
-    -- Remove from quest's objective list
-    if doc.data.quests and doc.data.quests[questId] and doc.data.quests[questId].objectiveIds then
-        local objectiveIds = doc.data.quests[questId].objectiveIds
-        for i, id in ipairs(objectiveIds) do
-            if id == objectiveId then
-                table.remove(objectiveIds, i)
-                break
-            end
-        end
-    end
-
-    -- Delete the objective data
-    self:_deleteObjectiveData(doc, objectiveId)
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    doc:CompleteChange("Removed objective from quest", {undoable = true})
-end
-
---- Adds a note to a quest
---- @param questId string The GUID of the quest
---- @param noteId string The GUID of the note to add
-function QTQuestManager:AddNoteToQuest(questId, noteId)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
-        return
-    end
-
-    doc:BeginChange()
-
-    -- Ensure quest exists and has note list
-    if not doc.data.quests then
-        doc.data.quests = {}
-    end
-    if not doc.data.quests[questId] then
-        doc.data.quests[questId] = {}
-    end
-
-    if not doc.data.quests[questId].noteIds then
-        doc.data.quests[questId].noteIds = {}
-    end
-
-    -- Add note ID to list
-    table.insert(doc.data.quests[questId].noteIds, noteId)
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    doc:CompleteChange("Added note to quest", {undoable = true})
-end
-
---- Removes a note from a quest
---- @param questId string The GUID of the quest
---- @param noteId string The GUID of the note to remove
-function QTQuestManager:RemoveNoteFromQuest(questId, noteId)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
-        return
-    end
-
-    doc:BeginChange()
-
-    if doc.data.quests and doc.data.quests[questId] and doc.data.quests[questId].noteIds then
-        local noteIds = doc.data.quests[questId].noteIds
-        for i, id in ipairs(noteIds) do
-            if id == noteId then
-                table.remove(noteIds, i)
-                break
-            end
-        end
-    end
-
-    -- Delete the note data
-    if doc.data.notes then
-        doc.data.notes[noteId] = nil
+    -- Remove the note
+    if doc.data.quests[questId].notes then
+        doc.data.quests[questId].notes[noteId] = nil
     end
     if doc.data.metadata then
         doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
     end
 
     doc:CompleteChange("Removed note from quest", {undoable = true})
-end
-
---- Adds a note to an objective
---- @param objectiveId string The GUID of the objective
---- @param noteId string The GUID of the note to add
---- @param noteType string Either "player" or "director"
-function QTQuestManager:AddNoteToObjective(objectiveId, noteId, noteType)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
-        return
-    end
-
-    doc:BeginChange()
-
-    -- Ensure objective exists and has note lists
-    if not doc.data.objectives then
-        doc.data.objectives = {}
-    end
-    if not doc.data.objectives[objectiveId] then
-        doc.data.objectives[objectiveId] = {}
-    end
-
-    local noteListField = noteType == "player" and "playerNoteIds" or "directorNoteIds"
-    if not doc.data.objectives[objectiveId][noteListField] then
-        doc.data.objectives[objectiveId][noteListField] = {}
-    end
-
-    -- Add note ID to appropriate list
-    table.insert(doc.data.objectives[objectiveId][noteListField], noteId)
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    doc:CompleteChange("Added note to objective", {undoable = true})
-end
-
---- Removes a note from an objective
---- @param objectiveId string The GUID of the objective
---- @param noteId string The GUID of the note to remove
-function QTQuestManager:RemoveNoteFromObjective(objectiveId, noteId)
-    local doc = self.mod:GetDocumentSnapshot(self.documentName)
-    if not doc.data then
-        return
-    end
-
-    doc:BeginChange()
-
-    if doc.data.objectives and doc.data.objectives[objectiveId] then
-        -- Remove from both player and director note lists
-        local noteFields = {"playerNoteIds", "directorNoteIds"}
-        for _, field in ipairs(noteFields) do
-            if doc.data.objectives[objectiveId][field] then
-                local noteIds = doc.data.objectives[objectiveId][field]
-                for i, id in ipairs(noteIds) do
-                    if id == noteId then
-                        table.remove(noteIds, i)
-                        break
-                    end
-                end
-            end
-        end
-    end
-
-    -- Delete the note data
-    if doc.data.notes then
-        doc.data.notes[noteId] = nil
-    end
-    if doc.data.metadata then
-        doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    end
-
-    doc:CompleteChange("Removed note from objective", {undoable = true})
 end
 
 --- Gets the path for document monitoring in UI

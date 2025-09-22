@@ -105,6 +105,7 @@ function QTQuestManagerWindow:new(questManager, quest)
         return nil
     end
 
+
     -- Set as global instance for refresh events (like CharacterSheet.instance)
     QTQuestManagerWindow.instance = instance
 
@@ -371,14 +372,6 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         hpad = 20,
         vpad = 20,
         styles = QTQuestManagerWindow._getDialogStyles(),
-        monitorGame = questManager:GetDocumentPath(),
-        refreshGame = function(element)
-            -- Rebuild objectives list when document changes
-            local objectivesScrollArea = element:Get("objectivesScrollArea")
-            if objectivesScrollArea then
-                objectivesScrollArea.children = buildObjectivesList()
-            end
-        end,
         children = {
             -- Scrollable objectives area
             gui.Panel{
@@ -465,14 +458,6 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
         hpad = 20,
         vpad = 20,
         styles = QTQuestManagerWindow._getDialogStyles(),
-        monitorGame = questManager:GetDocumentPath(),
-        refreshGame = function(element)
-            -- Rebuild notes list when document changes
-            local notesScrollArea = element:Get("notesScrollArea")
-            if notesScrollArea then
-                notesScrollArea.children = buildNotesList()
-            end
-        end,
         children = {
             -- Scrollable notes area
             gui.Panel{
@@ -784,10 +769,6 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                         edit = function(element)
                             if objective:GetTitle() ~= element.text then
                                 objective:SetTitle(element.text)
-                                -- Refresh to update UI state
-                                if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
-                                end
                             end
                         end
                     },
@@ -833,10 +814,6 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                 edit = function(element)
                     if objective:GetDescription() ~= element.text then
                         objective:SetDescription(element.text)
-                        -- Refresh to update UI state
-                        if QTQuestManagerWindow.instance then
-                            QTQuestManagerWindow.instance:FireEvent("refreshAll")
-                        end
                     end
                 end
             }
