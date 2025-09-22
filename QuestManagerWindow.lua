@@ -138,7 +138,6 @@ function QTQuestManagerWindow:Show()
 
     -- Show as modal
     gui.ShowModal(questWindow)
-    print("THC::", questWindow)
 end
 
 --- Creates the main window structure - WITH QUEST TAB CONTENT
@@ -257,7 +256,6 @@ function QTQuestManagerWindow:_createWindow()
                     contentPanel
                 }
             },
-
 
             -- X Close button (top right)
             gui.Panel{
@@ -379,6 +377,12 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         hpad = 20,
         vpad = 20,
         styles = QTQuestManagerWindow._getDialogStyles(),
+        refreshObjectives = function(element)
+            local scrollArea = element:Get("objectivesScrollArea")
+            if scrollArea then
+                scrollArea.children = buildObjectivesList()
+            end
+        end,
         children = {
             -- Scrollable objectives area
             gui.Panel{
@@ -413,7 +417,7 @@ function QTQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                     quest:AddObjective("")
                     -- Refresh to show the new objective
                     if QTQuestManagerWindow.instance then
-                        QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                     end
                 end
             }
@@ -676,7 +680,7 @@ local DragObjective = function(element, target)
 
     -- Refresh UI to show new order
     if QTQuestManagerWindow.instance then
-        QTQuestManagerWindow.instance:FireEvent("refreshAll")
+        QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
     end
 end
 
@@ -802,7 +806,7 @@ function QTQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                                 quest:UpdateProperties({}, "Updated objective status")
                                 -- Refresh to update styling
                                 if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                    QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                                 end
                             end
                         end
@@ -1093,7 +1097,7 @@ function QTQuestManagerWindow.ShowDeleteObjectiveConfirmation(quest, objectiveId
                         click = function(element)
                             quest:RemoveObjective(objectiveId)
                             if QTQuestManagerWindow.instance then
-                                QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                QTQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                             end
                             gui.CloseModal()
                         end
