@@ -120,6 +120,12 @@ function QTQuestManagerWindow:FireEvent(eventName)
     end
 end
 
+function QTQuestManagerWindow:FireEventTree(eventName)
+    if self.windowElement then
+        self.windowElement:FireEventTree(eventName)
+    end
+end
+
 --- Creates and shows the Quest Manager window
 function QTQuestManagerWindow:Show()
     if self.isOpen then
@@ -132,6 +138,7 @@ function QTQuestManagerWindow:Show()
 
     -- Show as modal
     gui.ShowModal(questWindow)
+    print("THC::", questWindow)
 end
 
 --- Creates the main window structure - WITH QUEST TAB CONTENT
@@ -458,6 +465,12 @@ function QTQuestManagerWindow.CreateNotesPanel(questManager, quest)
         hpad = 20,
         vpad = 20,
         styles = QTQuestManagerWindow._getDialogStyles(),
+        refreshNotes = function(element)
+            local scrollArea = element:Get("notesScrollArea")
+            if scrollArea then
+                scrollArea.children = buildNotesList()
+            end
+        end,
         children = {
             -- Scrollable notes area
             gui.Panel{
@@ -897,7 +910,7 @@ function QTQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                             if noteContent and noteContent:trim() ~= "" then
                                 quest:AddNote(noteContent, dmhub.userid)
                                 if QTQuestManagerWindow.instance then
-                                    QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                    QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
                                 end
                             end
                             gui.CloseModal()
@@ -988,7 +1001,7 @@ function QTQuestManagerWindow.ShowDeleteNoteConfirmation(quest, noteId)
                         click = function(element)
                             quest:RemoveNote(noteId)
                             if QTQuestManagerWindow.instance then
-                                QTQuestManagerWindow.instance:FireEvent("refreshAll")
+                                QTQuestManagerWindow.instance:FireEventTree("refreshNotes")
                             end
                             gui.CloseModal()
                         end
@@ -1697,16 +1710,6 @@ end
 --- @param questManager QTQuestManager The quest manager instance
 function QTQuestManagerWindow._showNewQuestDialog(questManager)
     local dialog = QTQuestDialog:new(questManager)
-    if dialog then
-        dialog:Show()
-    end
-end
-
---- Shows the quest dialog for editing existing quests
---- @param questManager QTQuestManager The quest manager instance
---- @param questId string The ID of the quest to edit
-function QTQuestManagerWindow._showEditQuestDialog(questManager, questId)
-    local dialog = QTQuestDialog:new(questManager, questId)
     if dialog then
         dialog:Show()
     end
