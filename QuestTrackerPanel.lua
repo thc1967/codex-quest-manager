@@ -335,18 +335,18 @@ local triangleStyles = {
 function QMQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, contentPanel)
     local categoryName = self:_getCategoryDisplayName(categoryId)
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
-    local isCollapsed = dmhub.GetPref(prefKey) or false
+    local isExpanded = dmhub.GetPref(prefKey) or false
 
     local triangle = gui.Panel{
-        classes = {"category-triangle", isCollapsed and nil or "expanded"},
+        classes = {"category-triangle", isExpanded and "expanded" or nil},
         styles = triangleStyles,
         click = function(element)
-            local expanded = element:HasClass("expanded")
-            element:SetClass("expanded", not expanded)
+            local isExpanded = not element:HasClass("expanded") -- Toggle current state
+            element:SetClass("expanded", isExpanded)
             if contentPanel then
-                contentPanel:SetClass("collapsed", expanded)
+                contentPanel:SetClass("collapsed", not isExpanded)
             end
-            dmhub.SetPref(prefKey, not expanded)
+            dmhub.SetPref(prefKey, isExpanded)
         end
     }
 
@@ -388,12 +388,12 @@ function QMQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
 
     -- Check collapse state from preferences
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
-    local isCollapsed = dmhub.GetPref(prefKey) or false
+    local isExpanded = dmhub.GetPref(prefKey) or false
 
     -- Build CSS classes array with conditional collapsed class
     local classes = {"category-content"}
-    if isCollapsed then
-        -- TODO: Figure this out; might be issue w/ storing in dmhub.GetPref() table.insert(classes, "collapsed")
+    if not isExpanded then
+        table.insert(classes, "collapsed")
     end
 
     return gui.Panel{
