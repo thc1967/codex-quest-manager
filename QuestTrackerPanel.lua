@@ -11,14 +11,10 @@ QMQuestTrackerPanel.__index = QMQuestTrackerPanel
 --- @param questManager QMQuestManager The quest manager instance for data operations
 --- @return QMQuestTrackerPanel|nil instance The new panel instance
 function QMQuestTrackerPanel:new(questManager)
+    if not questManager then return nil end
+
     local instance = setmetatable({}, self)
     instance.questManager = questManager
-
-    -- Validate we have required dependencies
-    if not instance.questManager then
-        return nil
-    end
-
     return instance
 end
 
@@ -53,7 +49,6 @@ function QMQuestTrackerPanel:_buildMainPanel()
             questTrackerPanel:_refreshPanelContent(element)
         end,
         show = function(element)
-            -- Refresh content when panel becomes visible
             questTrackerPanel:_refreshPanelContent(element)
         end,
         children = {
@@ -68,8 +63,7 @@ end
 function QMQuestTrackerPanel:_buildHeaderPanel()
     local questCount = 0
     if self.questManager then
-        local allQuests = self.questManager:GetAllQuests()
-        questCount = #allQuests
+        _, questCount = self.questManager:GetAllQuests()
     end
 
     return gui.Panel {
@@ -81,8 +75,22 @@ function QMQuestTrackerPanel:_buildHeaderPanel()
             gui.Label {
                 text = "Active Quests (" .. questCount .. ")",
                 classes = {"header-title"},
-                width = "60%"
+                width = "40%"
             },
+            -- gui.Button{
+            --     text = "INIT",
+            --     width = 60,
+            --     height = 30,
+            --     halign = "right",
+            --     valign = "center",
+            --     hmargin = 5,
+            --     linger = function(element)
+            --         gui.Tooltip("Clear all data.")(element)
+            --     end,
+            --     click = function(element)
+            --         self.questManager:InitializeDocument()
+            --     end
+            -- },
             -- gui.Button {
             --     text = "DEBUG",
             --     width = 60,
@@ -117,12 +125,12 @@ function QMQuestTrackerPanel:_buildContentPanel()
     local questChildren = {}
 
     if self.questManager then
-        local allQuests = self.questManager:GetAllQuests()
+        local allQuests, questCount = self.questManager:GetAllQuests()
 
-        if #allQuests == 0 then
+        if questCount == 0 then
             questChildren[#questChildren + 1] =
                 gui.Label {
-                text = "No quests yet. Click '+ New' to create your first quest!",
+                text = "No quests yet.",
                 classes = {"empty-state"},
                 width = "100%",
                 height = "100%",
@@ -133,7 +141,7 @@ function QMQuestTrackerPanel:_buildContentPanel()
         else
             -- Group quests by category
             local questsByCategory = {}
-            for _, quest in ipairs(allQuests) do
+            for _, quest in pairs(allQuests) do
                 local category = quest:GetCategory() or QMQuest.CATEGORY.MAIN
                 if not questsByCategory[category] then
                     questsByCategory[category] = {}
@@ -189,21 +197,10 @@ end
 function QMQuestTrackerPanel:_buildQuestItem(quest)
     local title = quest:GetTitle() or "Untitled Quest"
     local status = quest:GetStatus() or "unknown"
-    local category = quest:GetCategory() or "unknown"
-    local priority = quest:GetPriority() or "medium"
-
-    -- Status display formatting
-    local statusText =
-        status:gsub("_", " "):gsub(
-        "(%l)(%w*)",
-        function(a, b)
-            return string.upper(a) .. b
-        end
-    )
+    local priority = quest:GetPriority() or "unknown"
 
     -- Build action buttons array conditionally
     local actionButtons = {
-        -- Edit button (always visible)
         gui.SettingsButton {
             width = 20,
             height = 20,
@@ -218,8 +215,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
     }
 
     -- Add delete button only for DM or quest creator
-    local questCreator = quest:GetCreatedBy()
-    if dmhub.isDM or dmhub.userid == questCreator then
+    if dmhub.isDM or dmhub.userid == quest:GetCreatedBy() then
         actionButtons[#actionButtons + 1] = gui.DeleteItemButton {
             width = 20,
             height = 20,
@@ -240,9 +236,9 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
         height = 50,
         flow = "horizontal",
         classes = {"quest-item", "quest-" .. status, "priority-" .. priority},
-        click = function()
-            self:_showEditQuestDialog(quest.id)
-        end,
+        -- click = function()
+        --     self:_showEditQuestDialog(quest.id)
+        -- end,
         children = {
             -- Status indicator
             gui.Panel {
@@ -269,7 +265,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
                         flow = "horizontal",
                         children = {
                             gui.Label {
-                                text = string.format("%s; %s Priority", statusText, priority),
+                                text = string.format("%s; %s Priority", status, priority),
                                 classes = {"quest-status"},
                                 width = "100%",
                                 height = 15,
@@ -602,13 +598,18 @@ function QMQuestTrackerPanel:_getMainStyles()
     }
 end
 
---- Shows the quest dialog for creating new quests
-function QMQuestTrackerPanel:_showNewQuestDialog()
-    local draftQuest = self.questManager:CreateDraftQuest("New Quest", dmhub.playerId)
-    local questManagerWindow = QMQuestManagerWindow:new(self.questManager, draftQuest)
+--- Shows the Quest Manager window with the quest loaded
+--- @param quest QMQuest The quest to mange
+function QMQuestTrackerPanel:_showQuestDialog(quest)
+    local questManagerWindow = QMQuestManagerWindow:new(self.questManager, quest)
     if questManagerWindow then
         questManagerWindow:Show()
     end
+end
+
+--- Shows the quest dialog for creating new quests
+function QMQuestTrackerPanel:_showNewQuestDialog()
+    self:_showQuestDialog(QMQuest:new())
 end
 
 --- Shows the quest dialog for editing existing quests
@@ -616,19 +617,7 @@ end
 function QMQuestTrackerPanel:_showEditQuestDialog(questId)
     local quest = self.questManager:GetQuest(questId)
     if quest then
-        local questManagerWindow = QMQuestManagerWindow:new(self.questManager, quest)
-        if questManagerWindow then
-            questManagerWindow:Show()
-        end
-    end
-end
-
-
---- Shows the Quest Manager window
-function QMQuestTrackerPanel:_showQuestManagerWindow()
-    local questManagerWindow = QMQuestManagerWindow:new(self.questManager)
-    if questManagerWindow then
-        questManagerWindow:Show()
+        self:_showQuestDialog(quest)
     end
 end
 

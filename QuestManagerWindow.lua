@@ -2,6 +2,7 @@
 --- Provides a resizable, closable window with Quest, Objectives, and Notes tabs
 --- @class QMQuestManagerWindow
 --- @field questManager QMQuestManager The quest manager for data operations
+--- @field quest QMQuest The quest we're editing
 QMQuestManagerWindow = RegisterGameType("QMQuestManagerWindow")
 QMQuestManagerWindow.__index = QMQuestManagerWindow
 
@@ -78,6 +79,24 @@ QMQuestManagerWindow.TabsStyles = {
 
 QMQuestManagerWindow.TabOptions = {}
 
+--- Creates a new Quest Manager window instance
+--- @param questManager QMQuestManager The quest manager for data operations
+--- @param quest QMQuest The quest object to edit
+--- @return QMQuestManagerWindow|nil instance The new window instance
+function QMQuestManagerWindow:new(questManager, quest)
+    if not questManager or not quest then return nil end
+
+    local instance = setmetatable({}, self)
+    instance.questManager = questManager
+    instance.quest = quest
+    instance.isOpen = false
+
+    -- Set as global instance for refresh events
+    QMQuestManagerWindow.instance = instance
+
+    return instance
+end
+
 --- Registers a tab with the Quest Manager window
 --- @param tab table Tab configuration with id, text, and panel function
 function QMQuestManagerWindow.RegisterTab(tab)
@@ -90,29 +109,7 @@ function QMQuestManagerWindow.RegisterTab(tab)
     QMQuestManagerWindow.TabOptions[index] = tab
 end
 
---- Creates a new Quest Manager window instance
---- @param questManager QMQuestManager The quest manager for data operations
---- @param quest QMQuest The quest object to edit (draft or existing)
---- @return QMQuestManagerWindow instance The new window instance
-function QMQuestManagerWindow:new(questManager, quest)
-    local instance = setmetatable({}, self)
-    instance.questManager = questManager
-    instance.quest = quest
-    instance.isOpen = false
-
-    -- Validate we have required dependencies
-    if not instance.questManager or not instance.quest then
-        return nil
-    end
-
-
-    -- Set as global instance for refresh events (like CharacterSheet.instance)
-    QMQuestManagerWindow.instance = instance
-
-    return instance
-end
-
---- Fires an event on the window element (like CharacterSheet.instance:FireEvent)
+--- Fires an event on the window element
 --- @param eventName string The name of the event to fire
 function QMQuestManagerWindow:FireEvent(eventName)
     if self.windowElement then
@@ -120,6 +117,8 @@ function QMQuestManagerWindow:FireEvent(eventName)
     end
 end
 
+--- Fires an event on the tree - downward from the current element
+--- @param eventName string The name of the event to fire
 function QMQuestManagerWindow:FireEventTree(eventName)
     if self.windowElement then
         self.windowElement:FireEventTree(eventName)
@@ -128,23 +127,18 @@ end
 
 --- Creates and shows the Quest Manager window
 function QMQuestManagerWindow:Show()
-    if self.isOpen then
-        return -- Already open
-    end
+    if self.isOpen then return end
 
     self.isOpen = true
     local questWindow = self:_createWindow()
     self.windowElement = questWindow
 
-    -- Show as modal
     gui.ShowModal(questWindow)
 end
 
---- Creates the main window structure - WITH QUEST TAB CONTENT
+--- Creates the main window structure
 --- @return table panel The main window panel
 function QMQuestManagerWindow:_createWindow()
-    local questManagerWindow = self
-    local selectedTab = "Quest"
 
     -- Common close function for Cancel button and X button
     local closeWindow = function()
@@ -165,7 +159,7 @@ function QMQuestManagerWindow:_createWindow()
     -- Content panel that holds all tab panels
     local contentPanel = gui.Panel{
         width = "100%",
-        height = "100%",
+        height = "100%-100",
         flow = "none",
         valign = "top",
         children = tabPanels,
@@ -180,18 +174,13 @@ function QMQuestManagerWindow:_createWindow()
         end,
     }
 
-    -- Declare tabsPanel variable first
     local tabsPanel
 
-    -- Tab selection function
     local selectTab = function(tabName)
-        selectedTab = tabName
         local index = tabName == "Quest" and 1 or tabName == "Objectives" and 2 or 3
 
-        -- Hide/show tab content
         contentPanel:FireEventTree("showTab", index)
 
-        -- Update tab appearance
         for _, tab in ipairs(tabsPanel.children) do
             if tab.data and tab.data.tabName then
                 tab:SetClass("selected", tab.data.tabName == tabName)
@@ -228,6 +217,52 @@ function QMQuestManagerWindow:_createWindow()
         }
     }
 
+    -- Create the actions panel
+    local actionsPanel = gui.Panel{
+        width = "100%",
+        height = 40,
+        flow = "horizontal",
+        halign = "center",
+        valign = "center",
+        children = {
+            -- Cancel button (first)
+            gui.Button{
+                text = "Cancel",
+                width = 120,
+                height = 40,
+                hmargin = 20,
+                fontSize = 24,
+                classes = {"QMButton", "QMBase"},
+                click = function(element)
+                    gui.CloseModal()
+                end
+            },
+            -- Confirm button (second)
+            gui.Button{
+                text = "Confirm",
+                width = 120,
+                height = 40,
+                hmargin = 20,
+                fontSize = 24,
+                classes = {"QMButton", "QMBase"},
+                click = function(element)
+                    local confirmOverwrite = function()
+                        self.questManager:StoreQuest(self.quest)
+                        gui.CloseModal()
+                    end
+                    local lastModified = self.questManager:GetQuestLastModified(self.quest:GetID())
+                    if lastModified and lastModified > self.quest:GetModifiedTimestamp() then
+                        local title = "Overwrite Confirmation"
+                        local message = "This quest has been modified since you loaded it. Do you want to overwrite it?"
+                        QMUIUtils.ShowConfirmationDialog(title, message, "Overwrite", "", confirmOverwrite, nil)
+                    else
+                        confirmOverwrite()
+                    end
+                end
+            }
+        }
+    }
+
     return gui.Panel{
         id = "questManagerWindow",
         width = 1200,
@@ -253,7 +288,8 @@ function QMQuestManagerWindow:_createWindow()
                 flow = "vertical",
                 children = {
                     tabsPanel,
-                    contentPanel
+                    contentPanel,
+                    actionsPanel
                 }
             },
 
@@ -339,12 +375,24 @@ end
 --- @return table panel The objectives panel
 function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
     local function buildObjectivesList()
-        local objectives = quest:GetObjectives()
+        local objectives = quest:GetObjectivesSorted()
         local objectiveChildren = {}
 
-        if #objectives == 0 then
+        if next(objectives) then
+            local isFirstItem = true
+            for _, objective in pairs(objectives) do
+                -- Add divider before objective (except first one)
+                if not isFirstItem then
+                    objectiveChildren[#objectiveChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
+                end
+                isFirstItem = false
+
+                -- Objective item
+                objectiveChildren[#objectiveChildren + 1] = QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
+            end
+        else
             objectiveChildren[#objectiveChildren + 1] = gui.Label {
-                text = "No objectives yet. Click 'Add Objective' to create the first objective!",
+                text = "No objectives yet.",
                 width = "100%",
                 height = "100%",
                 halign = "center",
@@ -353,16 +401,6 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                 classes = {"QMLabel", "QMBase"},
                 bold = false
             }
-        else
-            for i, objective in ipairs(objectives) do
-                -- Add divider before objective (except first one)
-                if i > 1 then
-                    objectiveChildren[#objectiveChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
-                end
-
-                -- Objective item
-                objectiveChildren[#objectiveChildren + 1] = QMQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
-            end
         end
 
         return objectiveChildren
@@ -413,9 +451,7 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                     gui.Tooltip("Add a new objective")(element)
                 end,
                 click = function(element)
-                    -- Add new empty objective directly (character sheet pattern)
-                    quest:AddObjective("")
-                    -- Refresh to show the new objective
+                    quest:AddObjective()
                     if QMQuestManagerWindow.instance then
                         QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                     end
@@ -434,9 +470,20 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
         local notes = quest:GetNotes()
         local noteChildren = {}
 
-        if #notes == 0 then
+        local isFirstItem = true
+        if next(notes) then
+            for _, note in pairs(notes) do
+                if not isFirstItem then
+                    noteChildren[#noteChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
+                end
+                isFirstItem = false
+
+                -- Note item
+                noteChildren[#noteChildren + 1] = QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+            end
+        else
             noteChildren[#noteChildren + 1] = gui.Label {
-                text = "No notes yet. Click 'Add Note' to create the first note.",
+                text = "No notes yet.",
                 width = "100%",
                 height = "100%",
                 halign = "center",
@@ -445,16 +492,6 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
                 classes = {"QMLabel", "QMBase"},
                 bold = false
             }
-        else
-            for i, note in ipairs(notes) do
-                -- Add divider before note (except first one)
-                if i > 1 then
-                    noteChildren[#noteChildren + 1] = gui.Divider { width = "90%", vmargin = 2 }
-                end
-
-                -- Note item
-                noteChildren[#noteChildren + 1] = QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
-            end
         end
 
         return noteChildren
@@ -519,7 +556,7 @@ end
 function QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
     local content = note:GetContent() or ""
     local authorId = note:GetAuthorId() or "Unknown"
-    local timestamp = note:GetTimestamp() or ""
+    local timestamp = note:GetCreatedAt() or ""
 
     -- Format timestamp for display
     local displayTimestamp = timestamp
@@ -607,25 +644,20 @@ local DragObjective = function(element, target)
         return
     end
 
-    -- Must be same quest
-    if draggedData.quest.id ~= targetData.quest.id then
-        return
-    end
-
     local quest = draggedData.quest
     local draggedObjective = draggedData.objective
     local targetObjective = targetData.objective
 
-    -- Get all objectives sorted by current order
-    local objectives = quest:GetObjectives()
+    -- Get sorted objectives array
+    local objectives = quest:GetObjectivesSorted()
 
     -- Find indices of dragged and target objectives
     local draggedIndex, targetIndex
-    for i, obj in ipairs(objectives) do
-        if obj.id == draggedObjective.id then
+    for i, objective in ipairs(objectives) do
+        if objective:GetID() == draggedObjective:GetID() then
             draggedIndex = i
         end
-        if obj.id == targetObjective.id then
+        if objective:GetID() == targetObjective:GetID() then
             targetIndex = i
         end
     end
@@ -634,29 +666,26 @@ local DragObjective = function(element, target)
         return
     end
 
-    -- Create new order array
-    local newObjectivesOrder = {}
-
-    -- Build new array with dragged objective inserted before target
-    for i, obj in ipairs(objectives) do
+    -- Create new order by moving dragged objective before target
+    local newOrder = {}
+    
+    for i, objective in ipairs(objectives) do
         if i == targetIndex then
             -- Insert dragged objective before target
-            table.insert(newObjectivesOrder, draggedObjective)
+            newOrder[#newOrder + 1] = draggedObjective
         end
         if i ~= draggedIndex then
-            -- Add all objectives except the dragged one (it's been inserted above)
-            table.insert(newObjectivesOrder, obj)
+            -- Add all other objectives (skip the dragged one)
+            newOrder[#newOrder + 1] = objective
         end
     end
 
-    -- Renumber all objectives with new order
-    for newOrder, objective in ipairs(newObjectivesOrder) do
-        if objective:GetOrder() ~= newOrder then
-            objective:SetOrder(newOrder)
-        end
+    -- Update order values based on new positions
+    for newOrderValue, objective in ipairs(newOrder) do
+        objective:SetOrder(newOrderValue)
     end
 
-    -- Refresh UI to show new order
+    -- Refresh UI
     if QMQuestManagerWindow.instance then
         QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
     end
@@ -691,35 +720,25 @@ local CreateObjectiveDragHandle = function(quest, objective)
 end
 
 --- Creates a single objective item with in-place editing
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object
 --- @param objective QMQuestObjective The objective to display
 --- @return table panel The objective item panel
-function QMQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective)
+function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
     local title = objective:GetTitle() or ""
     local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
     local description = objective:GetDescription() or ""
 
-    -- Status display formatting
-    local statusText = status:gsub("_", " "):gsub("(%l)(%w*)", function(a, b)
-        return string.upper(a) .. b
-    end)
-
     -- Status options for dropdown (using same pattern as main quest tab)
-    local statusOptions = {
-        {id = QMQuestObjective.STATUS.NOT_STARTED, text = "Not Started"},
-        {id = QMQuestObjective.STATUS.ACTIVE, text = "Active"},
-        {id = QMQuestObjective.STATUS.COMPLETED, text = "Completed"},
-        {id = QMQuestObjective.STATUS.FAILED, text = "Failed"},
-        {id = QMQuestObjective.STATUS.ON_HOLD, text = "On Hold"}
-    }
+    local statusOptions = {}
+    for _, status in pairs(QMQuestObjective.STATUS) do
+        statusOptions[#statusOptions+1] = { id = status, text = status }
+    end
 
     -- Drag handle for reordering (always visible)
     local dragHandle = CreateObjectiveDragHandle(quest, objective)
 
-    -- Delete button (only for DM or objective creator - for now, allow DM to delete any)
     local deleteButton = nil
-    if dmhub.isDM then
+    if dmhub.isDM or objective:GetCreatedBy() == dmhub.userid then
         deleteButton = gui.DeleteItemButton {
             width = 20,
             height = 20,
@@ -784,9 +803,6 @@ function QMQuestManagerWindow.CreateObjectiveItem(questManager, quest, objective
                             local newStatus = element.idChosen
                             if objective:GetStatus() ~= newStatus then
                                 objective:SetStatus(newStatus)
-                                -- Update quest modified timestamp
-                                quest:UpdateProperties({}, "Updated objective status")
-                                -- Refresh to update styling
                                 if QMQuestManagerWindow.instance then
                                     QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
                                 end
@@ -894,7 +910,7 @@ function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                         classes = {"QMButton", "QMBase"},
                         click = function(element)
                             if noteContent and noteContent:trim() ~= "" then
-                                quest:AddNote(noteContent, dmhub.userid)
+                                quest:AddNote(noteContent)
                                 if QMQuestManagerWindow.instance then
                                     QMQuestManagerWindow.instance:FireEventTree("refreshNotes")
                                 end
@@ -995,29 +1011,22 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
     }
 
     -- Category options
-    local categoryOptions = {
-        {id = QMQuest.CATEGORY.MAIN, text = "Main Quest"},
-        {id = QMQuest.CATEGORY.SIDE, text = "Side Quest"},
-        {id = QMQuest.CATEGORY.PERSONAL, text = "Personal Quest"},
-        {id = QMQuest.CATEGORY.FACTION, text = "Faction Quest"},
-        {id = QMQuest.CATEGORY.TUTORIAL, text = "Tutorial"}
-    }
+    local categoryOptions = {}
+    for _, category in pairs(QMQuest.CATEGORY) do
+        categoryOptions[#categoryOptions+1] = { id = category, text = category .. " Quest" }
+    end
 
     -- Priority options
-    local priorityOptions = {
-        {id = QMQuest.PRIORITY.HIGH, text = "High Priority"},
-        {id = QMQuest.PRIORITY.MEDIUM, text = "Medium Priority"},
-        {id = QMQuest.PRIORITY.LOW, text = "Low Priority"}
-    }
+    local priorityOptions = {}
+    for _, priority in pairs(QMQuest.PRIORITY) do
+        priorityOptions[#priorityOptions+1] = { id = priority, text = priority }
+    end
 
     -- Status options
-    local statusOptions = {
-        {id = QMQuest.STATUS.NOT_STARTED, text = "Not Started"},
-        {id = QMQuest.STATUS.ACTIVE, text = "Active"},
-        {id = QMQuest.STATUS.COMPLETED, text = "Completed"},
-        {id = QMQuest.STATUS.FAILED, text = "Failed"},
-        {id = QMQuest.STATUS.ON_HOLD, text = "On Hold"}
-    }
+    local statusOptions = {}
+    for _, status in pairs(QMQuest.STATUS) do
+        statusOptions[#statusOptions+1] = { id = status, text = status }
+    end
 
     -- Create dropdown elements
     local categoryDropdown = gui.Dropdown{

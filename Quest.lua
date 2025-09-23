@@ -3,16 +3,31 @@
 --- @class QMQuest
 --- @field _manager QMQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this quest
+--- @field title string The title of this quest
+--- @field description string The description of this quest
+--- @field category string The category of this quest
+--- @field status string The status of this quest
+--- @field priority string The priority of this quest
+--- @field questGiver string The quest giver of this quest
+--- @field location string The location of this quest
+--- @field rewards string The rewards for completing this quest
+--- @field rewardsClaimed boolean Whether the rewards for this quest have been claimed
+--- @field visibleToPlayers boolean Whether this quest is visible to non-Directors
+--- @field objectives table The list of objectives (QMObjective) for this quest
+--- @field notes table The list of notes (QMNote) for this quest
+--- @field createdBy string GUID identifier of the user who created this objective
+--- @field createdAt string|osdate The ISO 8601 UTC timestamp
+--- @field modifiedAt string|osdate The ISO 8601 UTC timestamp
 QMQuest = RegisterGameType("QMQuest")
 QMQuest.__index = QMQuest
 
 --- Valid status values for quests
 QMQuest.STATUS = {
-    NOT_STARTED = "not_started",
-    ACTIVE = "active",
-    COMPLETED = "completed",
-    FAILED = "failed",
-    ON_HOLD = "on_hold"
+    NOT_STARTED = "Not Started",
+    ACTIVE = "Active",
+    COMPLETED = "Completed",
+    FAILED = "Failed",
+    ON_HOLD = "On Hold"
 }
 
 --- Valid category values for quests
@@ -32,290 +47,295 @@ QMQuest.PRIORITY = {
 }
 
 --- Creates a new quest instance
---- @param manager QMQuestManager The quest manager for document operations
---- @param questId string GUID identifier for this quest
+--- @param questId? string GUID identifier for this quest
 --- @return QMQuest instance The new quest instance
-function QMQuest:new(manager, questId)
+function QMQuest:new(questId)
     local instance = setmetatable({}, self)
-    instance._manager = manager
+
     instance.id = questId or dmhub.GenerateGuid()
+    instance.title = ""
+    instance.description = ""
+    instance.category = QMQuest.CATEGORY.MAIN
+    instance.status = QMQuest.STATUS.NOT_STARTED
+    instance.priority = QMQuest.PRIORITY.MEDIUM
+    instance.questGiver = ""
+    instance.location = ""
+    instance.rewards = ""
+    instance.rewardsClaimed = false
+    instance.visibleToPlayers = (not dmhub.isDM)
+    instance.objectives = {}
+    instance.notes = {}
+    instance.createdBy = dmhub.userid
+    instance.createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    instance.modifiedAt = nil
+
     return instance
+end
+
+--- Gets the identifier of this quest
+--- @return string id GUID id of this quest
+function QMQuest:GetID()
+    return self.id
 end
 
 --- Gets the title of this quest
 --- @return string title The quest title
 function QMQuest:GetTitle()
-    return self._manager:GetQuestField(self.id, "title") or ""
+    return self.title
 end
 
 --- Sets the title of this quest
 --- @param title string The new title for the quest
+--- @return QMQuest self For chaining
 function QMQuest:SetTitle(title)
-    self._manager:UpdateQuestField(self.id, "title", title)
+    self.title = title or ""
+    return self
 end
 
 --- Gets the description of this quest
 --- @return string description The quest description
 function QMQuest:GetDescription()
-    return self._manager:GetQuestField(self.id, "description") or ""
+    return self.description or ""
 end
 
 --- Sets the description of this quest
 --- @param description string The new description for the quest
+--- @return QMQuest self For chaining
 function QMQuest:SetDescription(description)
-    self._manager:UpdateQuestField(self.id, "description", description)
+    self.description = description or ""
+    return self
 end
 
 
 --- Gets the category of this quest
 --- @return string category One of QMQuest.CATEGORY values
 function QMQuest:GetCategory()
-    return self._manager:GetQuestField(self.id, "category") or QMQuest.CATEGORY.MAIN
+    return self.category
 end
 
 --- Sets the category of this quest
 --- @param category string One of QMQuest.CATEGORY values
+--- @return QMQuest self For chaining
 function QMQuest:SetCategory(category)
     if self:_isValidCategory(category) then
-        self._manager:UpdateQuestField(self.id, "category", category)
+        self.category = category
     end
+    return self
 end
 
 --- Gets the status of this quest
 --- @return string status One of QMQuest.STATUS values
 function QMQuest:GetStatus()
-    return self._manager:GetQuestField(self.id, "status") or QMQuest.STATUS.NOT_STARTED
+    return self.status
 end
 
 --- Sets the status of this quest
 --- @param status string One of QMQuest.STATUS values
+--- @return QMQuest self For chaining
 function QMQuest:SetStatus(status)
     if self:_isValidStatus(status) then
-        self._manager:UpdateQuestField(self.id, "status", status)
-        self._manager:UpdateQuestField(self.id, "modifiedTimestamp", os.date("!%Y-%m-%dT%H:%M:%SZ"))
+        self.status = status
     end
+    return self
 end
 
 --- Gets the priority of this quest
 --- @return string priority One of QMQuest.PRIORITY values
 function QMQuest:GetPriority()
-    return self._manager:GetQuestField(self.id, "priority") or QMQuest.PRIORITY.MEDIUM
+    return self.priority
 end
 
 --- Sets the priority of this quest
 --- @param priority string One of QMQuest.PRIORITY values
+--- @return QMQuest self For Chaining
 function QMQuest:SetPriority(priority)
     if self:_isValidPriority(priority) then
-        self._manager:UpdateQuestField(self.id, "priority", priority)
+        self.priority = priority
     end
+    return self
 end
 
 --- Gets the quest giver name
 --- @return string questGiver The name/description of who gave this quest
 function QMQuest:GetQuestGiver()
-    return self._manager:GetQuestField(self.id, "questGiver") or ""
+    return self.questGiver
 end
 
 --- Sets the quest giver name
 --- @param questGiver string The name/description of who gave this quest
+--- @return QMQuest self For chaining
 function QMQuest:SetQuestGiver(questGiver)
-    self._manager:UpdateQuestField(self.id, "questGiver", questGiver)
+    self.questGiver = questGiver or ""
+    return self
 end
 
 --- Gets the quest location
 --- @return string location The location associated with this quest
 function QMQuest:GetLocation()
-    return self._manager:GetQuestField(self.id, "location") or ""
+    return self.location
 end
 
 --- Sets the quest location
 --- @param location string The location associated with this quest
+--- @return QMQuest self For chaining
 function QMQuest:SetLocation(location)
-    self._manager:UpdateQuestField(self.id, "location", location)
+    self.location = location or ""
+    return self
 end
 
 --- Gets the rewards description
 --- @return string rewards The description of quest rewards
 function QMQuest:GetRewards()
-    return self._manager:GetQuestField(self.id, "rewards") or ""
+    return self.rewards
 end
 
 --- Sets the rewards description
 --- @param rewards string The description of quest rewards
+--- @return QMQuest self For chaining
 function QMQuest:SetRewards(rewards)
-    self._manager:UpdateQuestField(self.id, "rewards", rewards)
+    self.rewards = rewards or ""
+    return self
 end
 
 --- Gets whether rewards have been claimed
 --- @return boolean claimed True if rewards have been claimed
 function QMQuest:GetRewardsClaimed()
-    return self._manager:GetQuestField(self.id, "rewardsClaimed") or false
+    return self.rewardsClaimed
 end
 
 --- Sets whether rewards have been claimed
 --- @param claimed boolean True if rewards have been claimed
+--- @return QMQuest self For chaining
 function QMQuest:SetRewardsClaimed(claimed)
-    self._manager:UpdateQuestField(self.id, "rewardsClaimed", claimed)
+    self.rewardsClaimed = claimed or false
+    return self
 end
 
 --- Gets whether this quest is visible to players
 --- @return boolean visible True if players can see this quest
 function QMQuest:GetVisibleToPlayers()
-    return self._manager:GetQuestField(self.id, "visibleToPlayers") or (not dmhub.isDM)
+    return self.visibleToPlayers
 end
 
 --- Sets whether this quest is visible to players
 --- @param visible boolean True if players should see this quest
+--- @return QMQuest self For chaining
 function QMQuest:SetVisibleToPlayers(visible)
-    self._manager:UpdateQuestField(self.id, "visibleToPlayers", visible)
+    self.visibleToPlayers = visible or false
+    return self
 end
 
 --- Gets who created this quest
 --- @return string createdBy The Codex player ID of the quest creator
 function QMQuest:GetCreatedBy()
-    return self._manager:GetQuestField(self.id, "createdBy") or ""
+    return self.createdBy
 end
 
 --- Gets when this quest was created
---- @return string timestamp ISO 8601 UTC timestamp
+--- @return string|osdate timestamp ISO 8601 UTC timestamp
 function QMQuest:GetCreatedTimestamp()
-    return self._manager:GetQuestField(self.id, "createdTimestamp") or ""
+    return self.createdAt
 end
 
 --- Gets when this quest was last modified
---- @return string timestamp ISO 8601 UTC timestamp
+--- @return string|osdate timestamp ISO 8601 UTC timestamp
 function QMQuest:GetModifiedTimestamp()
-    return self._manager:GetQuestField(self.id, "modifiedTimestamp") or ""
+    return self.modifiedAt
 end
 
---- Gets the highest order number among all objectives for this quest
---- @return number maxOrder The highest order number, or 0 if no objectives exist
-function QMQuest:GetMaxObjectiveOrder()
-    local objectivesData = self._manager:GetQuestObjectives(self.id)
-    local maxOrder = 0
-
-    for objectiveId, _ in pairs(objectivesData) do
-        local objective = QMQuestObjective:new(self._manager, self.id, objectiveId)
-        local order = objective:GetOrder()
-        if order > maxOrder then
-            maxOrder = order
-        end
-    end
-
-    return maxOrder
+--- Set the modified timestamp to the current time
+--- @return QMQuest self For chaining
+function QMQuest:_setModifiedTimestamp()
+    self.modifiedAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    return self
 end
 
---- Gets all objectives for this quest sorted by order (lowest to highest)
---- @return table objectives Array of QMQuestObjective instances sorted by order
+--- Returns the objective matching the key or nil if not found
+--- @param objectiveId string The GUID identifier of the objective to return
+--- @return QMQuestObjective|nil The objective referenced by the key or nil if it doesn't exist
+function QMQuest:GetObjective(objectiveId)
+    return self.objectives[objectiveId or ""]
+end
+
+--- Gets all objectives for this quest
+--- @return table objectives Array of QMQuestObjective instances
 function QMQuest:GetObjectives()
-    local objectivesData = self._manager:GetQuestObjectives(self.id)
-    local objectives = {}
-    for objectiveId, _ in pairs(objectivesData) do
-        table.insert(objectives, QMQuestObjective:new(self._manager, self.id, objectiveId))
+    return self.objectives
+end
+
+-- Returns the list of objectives sorted by order (lowest to highest)
+--- @return table objectives Array of QMQuestObjective instances sorted by order
+function QMQuest:GetObjectivesSorted()
+    -- Convert hash table to array
+    local objectivesArray = {}
+    for objectiveId, objective in pairs(self.objectives) do
+        objectivesArray[#objectivesArray + 1] = objective
     end
 
-    -- Sort objectives by order field (lowest to highest)
-    table.sort(objectives, function(a, b)
+    -- Sort the array
+    table.sort(objectivesArray, function(a, b)
         return a:GetOrder() < b:GetOrder()
     end)
 
-    return objectives
+    return objectivesArray
 end
 
 --- Adds a new objective to this quest
---- @param description string The objective description
 --- @return QMQuestObjective objective The newly created objective
-function QMQuest:AddObjective(description)
-    local objective = QMQuestObjective:new(self._manager, self.id)
-
-    -- Get the next order number by finding the highest existing order and adding 1
-    local nextOrder = self:GetMaxObjectiveOrder() + 1
-
-    objective:UpdateProperties(
-        {
-            description = description,
-            order = nextOrder
-        },
-        "Added objective to quest",
-        true  -- Apply defaults
-    )
-
+function QMQuest:AddObjective()
+    local nextOrder = self:_maxObjectiveOrder() + 1
+    local objective = QMQuestObjective:new(nextOrder)
+    self.objectives[objective:GetID()] = objective
     return objective
 end
 
 --- Removes an objective from this quest
 --- @param objectiveId string The GUID of the objective to remove
+--- @return QMQuest self For chaining
 function QMQuest:RemoveObjective(objectiveId)
-    self._manager:DeleteQuestObjective(self.id, objectiveId)
+    if self.objectives[objectiveId] then
+        self.objectives[objectiveId] = nil
+    end
+    return self
 end
 
 --- Gets all notes for this quest sorted by timestamp (newest first)
 --- @return table notes Array of QMQuestNote instances
 function QMQuest:GetNotes()
-    local notesData = self._manager:GetQuestNotes(self.id)
-    local notes = {}
-    for noteId, _ in pairs(notesData) do
-        table.insert(notes, QMQuestNote:new(self._manager, self.id, noteId))
+    local notesArray = {}
+    for _, note in pairs(self.notes) do
+        notesArray [#notesArray+1] = note
     end
 
-    -- Sort by timestamp descending (newest first)
-    table.sort(notes, function(a, b)
-        local timestampA = a:GetTimestamp()
-        local timestampB = b:GetTimestamp()
-        return timestampA > timestampB
+    table.sort(notesArray, function(a, b)
+        return a:GetCreatedAt() > b:GetCreatedAt()
     end)
-
-    return notes
+    return notesArray
 end
 
 --- Adds a new note to this quest
 --- @param content string The note content
---- @param authorId string The Codex player ID of the author
 --- @return QMQuestNote note The newly created note
-function QMQuest:AddNote(content, authorId)
-    local note = QMQuestNote:new(self._manager, self.id)
-    note:UpdateProperties(
-        {
-            content = content,
-            authorId = authorId,
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        },
-        "Added note to quest"
-    )
-
+function QMQuest:AddNote(content)
+    local note = QMQuestNote:new(content)
+    self.notes[note.id] = note
     return note
 end
 
 --- Removes a note from this quest
 --- @param noteId string The GUID of the note to remove
+--- @return QMQuest self For chaining
 function QMQuest:RemoveNote(noteId)
-    self._manager:DeleteQuestNote(self.id, noteId)
-end
-
---- Updates multiple quest properties in a single document transaction
---- @param properties table Key-value pairs of properties to update
---- @param changeDescription string Optional description for the change
-function QMQuest:UpdateProperties(properties, changeDescription)
-    -- Validate enums
-    if properties.status and not self:_isValidStatus(properties.status) then
-        properties.status = nil
+    if self.notes[noteId] then
+        self.notes[noteId] = nil
     end
-    if properties.category and not self:_isValidCategory(properties.category) then
-        properties.category = nil
-    end
-    if properties.priority and not self:_isValidPriority(properties.priority) then
-        properties.priority = nil
-    end
-
-    -- Always update modified timestamp when updating properties
-    properties.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-
-    self._manager:UpdateQuestProperties(self.id, properties, changeDescription)
+    return self
 end
 
 --- Validates if the given status is valid for quests
 --- @param status string The status to validate
 --- @return boolean valid True if the status is valid
+--- @private
 function QMQuest:_isValidStatus(status)
     for _, validStatus in pairs(QMQuest.STATUS) do
         if status == validStatus then
@@ -328,6 +348,7 @@ end
 --- Validates if the given category is valid for quests
 --- @param category string The category to validate
 --- @return boolean valid True if the category is valid
+--- @private
 function QMQuest:_isValidCategory(category)
     for _, validCategory in pairs(QMQuest.CATEGORY) do
         if category == validCategory then
@@ -340,6 +361,7 @@ end
 --- Validates if the given priority is valid for quests
 --- @param priority string The priority to validate
 --- @return boolean valid True if the priority is valid
+--- @private
 function QMQuest:_isValidPriority(priority)
     for _, validPriority in pairs(QMQuest.PRIORITY) do
         if priority == validPriority then
@@ -349,4 +371,18 @@ function QMQuest:_isValidPriority(priority)
     return false
 end
 
+--- Gets the highest order number among all objectives for this quest
+--- @return number maxOrder The highest order number, or 0 if no objectives exist
+--- @private
+function QMQuest:_maxObjectiveOrder()
+    local maxOrder = 0
 
+    for _, objective in pairs(self.objectives) do
+        local order = objective:GetOrder()
+        if order > maxOrder then
+            maxOrder = order
+        end
+    end
+
+    return maxOrder
+end
