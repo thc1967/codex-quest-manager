@@ -1,7 +1,6 @@
 --- Individual objective within a quest with status tracking and notes
 --- Supports the same status progression as quests with player and director notes
 --- @class QMQuestObjective
---- @field _manager QMQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this objective 
 --- @field order number The sort order for this objective
 --- @field title string The title of this objective
@@ -25,7 +24,6 @@ QMQuestObjective.STATUS = {
 --- @param sortOrder number The sort order for this note
 --- @return QMQuestObjective instance The new objective instance
 function QMQuestObjective:new(sortOrder)
-    local currentTime = os.date("!%Y-%m-%dT%H:%M:%SZ")
     local instance = setmetatable({}, self)
     instance.id = dmhub.GenerateGuid()
     instance.order = sortOrder
@@ -33,7 +31,7 @@ function QMQuestObjective:new(sortOrder)
     instance.description = ""
     instance.status = QMQuestObjective.STATUS.NOT_STARTED
     instance.createdBy = dmhub.userid
-    instance.createdAt = currentTime
+    instance.createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
     return instance
 end
 
@@ -68,7 +66,6 @@ end
 --- @return QMQuestObjective self For chaining
 function QMQuestObjective:SetOrder(order)
     self.order = order
-    self.modifiedAt =  os.date("!%Y-%m-%dT%H:%M:%SZ")
     return self
 end
 

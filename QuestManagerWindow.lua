@@ -3,10 +3,9 @@
 --- @class QMQuestManagerWindow
 --- @field questManager QMQuestManager The quest manager for data operations
 --- @field quest QMQuest The quest we're editing
+--- @field isOpen boolean Whether the window is currently open / displayed
 QMQuestManagerWindow = RegisterGameType("QMQuestManagerWindow")
 QMQuestManagerWindow.__index = QMQuestManagerWindow
-
-local mod = dmhub.GetModLoading()
 
 -- Windowed mode setting
 setting{
@@ -479,7 +478,7 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
                 isFirstItem = false
 
                 -- Note item
-                noteChildren[#noteChildren + 1] = QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+                noteChildren[#noteChildren + 1] = QMQuestManagerWindow.CreateNoteItem(quest, note)
             end
         else
             noteChildren[#noteChildren + 1] = gui.Label {
@@ -549,11 +548,10 @@ end
 
 
 --- Creates a single note item display
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object
 --- @param note QMQuestNote The note to display
 --- @return table panel The note item panel
-function QMQuestManagerWindow.CreateNoteItem(questManager, quest, note)
+function QMQuestManagerWindow.CreateNoteItem(quest, note)
     local content = note:GetContent() or ""
     local authorId = note:GetAuthorId() or "Unknown"
     local timestamp = note:GetCreatedAt() or ""
@@ -668,7 +666,7 @@ local DragObjective = function(element, target)
 
     -- Create new order by moving dragged objective before target
     local newOrder = {}
-    
+
     for i, objective in ipairs(objectives) do
         if i == targetIndex then
             -- Insert dragged objective before target
@@ -728,11 +726,7 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
     local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
     local description = objective:GetDescription() or ""
 
-    -- Status options for dropdown (using same pattern as main quest tab)
-    local statusOptions = {}
-    for _, status in pairs(QMQuestObjective.STATUS) do
-        statusOptions[#statusOptions+1] = { id = status, text = status }
-    end
+    local statusOptions = QMUIUtils.ListToDropdownOptions(QMQuestObjective.STATUS)
 
     -- Drag handle for reordering (always visible)
     local dragHandle = CreateObjectiveDragHandle(quest, objective)
@@ -1010,23 +1004,10 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         end
     }
 
-    -- Category options
-    local categoryOptions = {}
-    for _, category in pairs(QMQuest.CATEGORY) do
-        categoryOptions[#categoryOptions+1] = { id = category, text = category .. " Quest" }
-    end
-
-    -- Priority options
-    local priorityOptions = {}
-    for _, priority in pairs(QMQuest.PRIORITY) do
-        priorityOptions[#priorityOptions+1] = { id = priority, text = priority }
-    end
-
-    -- Status options
-    local statusOptions = {}
-    for _, status in pairs(QMQuest.STATUS) do
-        statusOptions[#statusOptions+1] = { id = status, text = status }
-    end
+    -- Dropdown list options
+    local categoryOptions = QMUIUtils.ListToDropdownOptions(QMQuest.CATEGORY)
+    local priorityOptions = QMUIUtils.ListToDropdownOptions(QMQuest.PRIORITY)
+    local statusOptions = QMUIUtils.ListToDropdownOptions(QMQuest.STATUS)
 
     -- Create dropdown elements
     local categoryDropdown = gui.Dropdown{

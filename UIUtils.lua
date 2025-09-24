@@ -223,22 +223,34 @@ end
 --- @param userId string The user ID to look up
 --- @return string coloredDisplayName The player's display name with HTML color tags, or "{unknown}" if not found
 function QMUIUtils.GetPlayerDisplayName(userId)
-    if not userId or userId == "" then
-        return "{unknown}"
-    end
 
-    local sessionInfo = dmhub.GetSessionInfo(userId)
-    if sessionInfo and sessionInfo.displayName then
-        local displayName = sessionInfo.displayName
-        if sessionInfo.displayColor and sessionInfo.displayColor.tostring then
-            local colorCode = sessionInfo.displayColor.tostring
-            return "<color=" .. colorCode .. ">" .. displayName .. "</color>"
-        else
-            return displayName
+    if userId and #userId > 0 then
+        local sessionInfo = dmhub.GetSessionInfo(userId)
+        if sessionInfo and sessionInfo.displayName then
+            local displayName = sessionInfo.displayName
+            if sessionInfo.displayColor and sessionInfo.displayColor.tostring then
+                local colorCode = sessionInfo.displayColor.tostring
+                return string.format("<color=%s>%s</color>", colorCode, displayName)
+            else
+                return displayName
+            end
         end
     end
 
     return "{unknown}"
+end
+
+--- Transforms a list of strings into a list of id, text pairs for dropdown lists
+--- @param sourceList table The table to convert
+--- @return table destList The transformed table
+function QMUIUtils.ListToDropdownOptions(sourceList)
+    local destList = {}
+    if sourceList and type(sourceList) == "table" then
+        for _, item in pairs(sourceList) do
+            destList[#destList+1] = { id = item, text = item}
+        end
+    end
+    return destList
 end
 
 --- Shows a generic confirmation dialog with customizable title and message

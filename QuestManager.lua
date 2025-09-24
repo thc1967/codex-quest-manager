@@ -16,10 +16,7 @@ local monitorDoc = mod:GetDocumentSnapshot(documentName)
 function QMQuestManager:new()
     local instance = setmetatable({}, self)
     instance.mod = dmhub.GetModLoading()
-    instance.documentName = "QMQuestLog"
-
-    -- instance:_ensureDocInitialized()
-
+    instance.documentName = documentName
     return instance
 end
 
@@ -51,7 +48,6 @@ function QMQuestManager:GetQuest(questId)
     local doc = self:_safeDoc()
     if doc and doc.data.quests[questId] then
         local quest = doc.data.quests[questId]
-        -- print(string.format("THC:: ONE:: DM:: %s V2P:: %s CREATOR:: %s USER:: %s", dmhub.isDM, quest:GetVisibleToPlayers(), quest:GetCreatedBy(), dmhub.userid))
         if QMQuestManager._questVisibleToUser(quest) then
             return DeepCopy(quest)
         end
@@ -113,7 +109,6 @@ function QMQuestManager:GetAllQuests()
 
     if doc then
         for questId, quest in pairs(doc.data.quests) do
-            -- print(string.format("THC:: ALL:: DM:: %s V2P:: %s CREATOR:: %s USER:: %s", dmhub.isDM, quest:GetVisibleToPlayers(), quest:GetCreatedBy(), dmhub.userid))
             if QMQuestManager._questVisibleToUser(quest) then
                 quests[questId] = DeepCopy(quest)
                 questCount = questCount + 1

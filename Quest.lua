@@ -268,7 +268,7 @@ end
 function QMQuest:GetObjectivesSorted()
     -- Convert hash table to array
     local objectivesArray = {}
-    for objectiveId, objective in pairs(self.objectives) do
+    for _, objective in pairs(self.objectives) do
         objectivesArray[#objectivesArray + 1] = objective
     end
 

@@ -1,7 +1,6 @@
 --- Individual note attached to quests or objectives with author tracking
 --- Supports both player notes and director notes with visibility controls
 --- @class QMQuestNote
---- @field _manager QMQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this note
 --- @field authorId string GUID identifier for this note's creator
 --- @field content string The content of the note
@@ -10,7 +9,7 @@ QMQuestNote = RegisterGameType("QMQuestNote")
 QMQuestNote.__index = QMQuestNote
 
 --- Creates a new quest note instance
---- @param manager QMQuestManager The quest manager for document operations
+--- @param content string The content of the note
 --- @return QMQuestNote instance The new note instance
 function QMQuestNote:new(content)
     local instance = setmetatable({}, self)
