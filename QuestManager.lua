@@ -15,7 +15,7 @@ local monitorDoc = mod:GetDocumentSnapshot(documentName)
 --- @return QMQuestManager instance The new quest manager instance
 function QMQuestManager:new()
     local instance = setmetatable({}, self)
-    instance.mod = dmhub.GetModLoading()
+    instance.mod = mod
     instance.documentName = documentName
     return instance
 end

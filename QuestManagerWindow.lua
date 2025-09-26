@@ -816,7 +816,7 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                 classes = {"QMInput", "QMBase"},
                 text = description,
                 placeholderText = "Enter objective description...",
-                lineType = "MultiLine",
+                multiline = true,
                 textAlignment = "topleft",
                 editlag = 0.25,
                 vmargin = 5,
@@ -869,7 +869,7 @@ function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                 classes = {"QMInput", "QMBase"},
                 textAlignment = "topleft",
                 placeholderText = "Enter your note here...",
-                lineType = "MultiLine",
+                multiline = true,
                 vmargin = 5,
                 change = function(element)
                     noteContent = element.text or ""
@@ -952,7 +952,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         classes = {"QMInput", "QMBase"},
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
-        lineType = "MultiLine",
+        multiline = true,
         textAlignment = "topleft",
         editlag = 0.25,
         edit = function(element)
