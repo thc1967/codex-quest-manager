@@ -293,7 +293,9 @@ end
 --- @param objectiveId string The GUID of the objective to remove
 --- @return QMQuest self For chaining
 function QMQuest:RemoveObjective(objectiveId)
+    print("THC:: QUEST:: REMOVEOBJECTIVE::", objectiveId)
     if self.objectives[objectiveId] then
+        print("THC:: REMOVING::")
         self.objectives[objectiveId] = nil
     end
     return self

@@ -7,6 +7,16 @@
 QMQuestManagerWindow = RegisterGameType("QMQuestManagerWindow")
 QMQuestManagerWindow.__index = QMQuestManagerWindow
 
+local function controller()
+    return QMQuestManagerWindow.instance.windowElement:Get("questManagerWindow")
+end
+
+--- Fire an event on the quest manager window's topmost element
+--- @param eventName string The name of the event to fire = the function the element must implement to respond
+local function fireControllerEvent(eventName, ...)
+    controller():FireEvent(eventName, ...)
+end
+
 -- Windowed mode setting
 setting{
     id = "quest:windowed",
@@ -16,7 +26,6 @@ setting{
 
 QMQuestManagerWindow.defaultTab = "Quest"
 
--- Tab styling similar to character sheet
 QMQuestManagerWindow.TabsStyles = {
     gui.Style{
         selectors = {"questTabContainer"},
@@ -110,17 +119,17 @@ end
 
 --- Fires an event on the window element
 --- @param eventName string The name of the event to fire
-function QMQuestManagerWindow:FireEvent(eventName)
+function QMQuestManagerWindow:FireEvent(eventName, ...)
     if self.windowElement then
-        self.windowElement:FireEvent(eventName)
+        self.windowElement:FireEvent(eventName, ...)
     end
 end
 
 --- Fires an event on the tree - downward from the current element
 --- @param eventName string The name of the event to fire
-function QMQuestManagerWindow:FireEventTree(eventName)
+function QMQuestManagerWindow:FireEventTree(eventName, ...)
     if self.windowElement then
-        self.windowElement:FireEventTree(eventName)
+        self.windowElement:FireEventTree(eventName, ...)
     end
 end
 
@@ -279,6 +288,16 @@ function QMQuestManagerWindow:_createWindow()
             Styles.Panel,
             QMQuestManagerWindow.TabsStyles
         },
+        monitorGame = QMQuestManager:new():GetDocumentPath(),
+        refreshGame = function(element)
+            element:FireEventTree("refreshQuest")
+        end,
+        updateQuest = function(element, fn)
+            local qm = QMQuestManager:new()
+            if qm then
+                qm:ExecuteUpdateFn(fn)
+            end
+        end,
         children = {
             -- Main content area (full height, no footer)
             gui.Panel{
@@ -415,6 +434,7 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
         vpad = 20,
         styles = QMUIUtils.GetDialogStyles(),
         refreshObjectives = function(element)
+            -- TODO: We should remove this in favor of a reconcile
             local scrollArea = element:Get("objectivesScrollArea")
             if scrollArea then
                 scrollArea.children = buildObjectivesList()
@@ -434,6 +454,14 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                         height = "auto",
                         flow = "vertical",
                         valign = "top",
+                        deleteObjective = function(element, objectiveId)
+                            -- TODO: We should actually respond to the refreshQuest event to remove the pane
+                            local editorPane = element:Get(objectiveId)
+                            element:RemoveChild(editorPane)
+                            fireControllerEvent("updateQuest", function()
+                                quest:RemoveObjective(objectiveId)
+                            end)
+                        end,
                         children = {
                             table.unpack(buildObjectivesList())
                         }
@@ -722,6 +750,7 @@ end
 --- @param objective QMQuestObjective The objective to display
 --- @return table panel The objective item panel
 function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
+    local id = objective:GetID()
     local title = objective:GetTitle() or ""
     local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
     local description = objective:GetDescription() or ""
@@ -740,11 +769,11 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
             valign = "top",
             hmargin = 5,
             vmargin = 5,
-            click = function()
+            click = function(element)
                 QMUIUtils.ShowDeleteConfirmation("objective", title, function()
-                    quest:RemoveObjective(objective.id)
+                    -- quest:RemoveObjective(objective.id)
                     if QMQuestManagerWindow.instance then
-                        QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
+                        QMQuestManagerWindow.instance:FireEventTree("deleteObjective", objective:GetID())
                     end
                 end)
             end
@@ -752,12 +781,13 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
     end
 
     return gui.Panel {
+        id = id,
         width = "100%",
         height = "auto",
         flow = "vertical",
         valign = "top",
         vmargin = 5,
-        classes = {"objective-item", "status-" .. status},
+        classes = {"objective-item", "status-" .. status, id},
         children = {
             -- Header with drag handle, title, status, and delete button
             gui.Panel {
@@ -939,9 +969,14 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         placeholderText = "Enter quest title...",
         lineType = "Single",
         editlag = 0.25,
+        refreshQuest = function(element)
+            element.text = quest:GetTitle()
+        end,
         edit = function(element)
             if quest:GetTitle() ~= element.text then
-                quest:SetTitle(element.text)
+                fireControllerEvent("updateQuest", function()
+                    quest:SetTitle(element.text)
+                end)
             end
         end
     }
@@ -955,9 +990,14 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         multiline = true,
         textAlignment = "topleft",
         editlag = 0.25,
+        refreshQuest = function(element)
+            element.text = quest:GetDescription()
+        end,
         edit = function(element)
             if quest:GetDescription() ~= element.text then
-                quest:SetDescription(element.text)
+                fireControllerEvent("updateQuest", function()
+                    quest:SetDescription(element.text)
+                end)
             end
         end
     }
@@ -969,9 +1009,14 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         placeholderText = "Who gave this quest?",
         lineType = "Single",
         editlag = 0.25,
+        refreshQuest = function(element)
+            element.text = quest:GetQuestGiver()
+        end,
         edit = function(element)
             if quest:GetQuestGiver() ~= element.text then
-                quest:SetQuestGiver(element.text)
+                fireControllerEvent("updateQuest", function()
+                    quest:SetQuestGiver(element.text)
+                end)
             end
         end
     }
@@ -1122,6 +1167,16 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
                         children = {
                             visibleToPlayersCheckbox
                         }
+                    },
+                    gui.Button { -- THC::
+                        text = "test",
+                        width = 60,
+                        height = 20,
+                        click = function(element)
+                            QMQuestManagerWindow.instance:FireEventTree("updateQuest", function ()
+                                quest:SetTitle(quest:GetTitle() .. "12345")
+                            end)
+                        end
                     }
                 },
             },

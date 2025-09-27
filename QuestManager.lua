@@ -9,7 +9,6 @@ QMQuestManager.__index = QMQuestManager
 -- Module-level document monitor for persistence (like ZenHeroTokens pattern)
 local mod = dmhub.GetModLoading()
 local documentName = "QMQuestLog"
-local monitorDoc = mod:GetDocumentSnapshot(documentName)
 
 --- Creates a new quest manager instance
 --- @return QMQuestManager instance The new quest manager instance
@@ -49,7 +48,8 @@ function QMQuestManager:GetQuest(questId)
     if doc and doc.data.quests[questId] then
         local quest = doc.data.quests[questId]
         if QMQuestManager._questVisibleToUser(quest) then
-            return DeepCopy(quest)
+            -- return DeepCopy(quest)
+            return quest
         end
     end
     return nil
@@ -96,6 +96,20 @@ function QMQuestManager:DeleteQuest(questId)
         end
 
         doc:CompleteChange("Deleted quest", {undoable = false})
+    end
+end
+
+--- Executes an update function callback within a change transaction
+--- @param f function The function to execute
+function QMQuestManager:ExecuteUpdateFn(f)
+    local doc = self:_safeDoc()
+    if doc then
+        doc:BeginChange()
+        f()
+        if doc.data.metadata then
+            doc.data.metadata.modifiedTimestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        end
+        doc:CompleteChange("quest update", {undoable = false})
     end
 end
 
@@ -189,5 +203,5 @@ end
 --- Gets the path for document monitoring in UI
 --- @return string path The document path for monitoring
 function QMQuestManager:GetDocumentPath()
-    return monitorDoc.path
+    return self.mod:GetDocumentSnapshot(self.documentName).path
 end
