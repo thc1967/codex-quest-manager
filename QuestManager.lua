@@ -40,6 +40,17 @@ function QMQuestManager:InitializeDocument()
     return doc
 end
 
+--- Creates and stores a quest in the manager then returns it
+--- @return QMQuest|nil quest The newly created quest or nil if we can't create or store one
+function QMQuestManager:CreateQuest()
+    local quest = QMQuest:new()
+    if quest then
+        self:StoreQuest(quest)
+        return self:GetQuest(quest:GetID())
+    end
+    return nil
+end
+
 --- Gets a quest by its ID with visibility checks applied
 --- @param questId string The GUID of the quest
 --- @return QMQuest|nil instance The quest instance or nil if not found or not visible
@@ -48,7 +59,6 @@ function QMQuestManager:GetQuest(questId)
     if doc and doc.data.quests[questId] then
         local quest = doc.data.quests[questId]
         if QMQuestManager._questVisibleToUser(quest) then
-            -- return DeepCopy(quest)
             return quest
         end
     end
@@ -68,6 +78,7 @@ end
 
 --- Stores a quest
 --- @param quest QMQuest The quest to store
+--- @return QMQuest quest The quest passed
 function QMQuestManager:StoreQuest(quest)
     local doc = self:_safeDoc()
     if doc then
@@ -80,6 +91,7 @@ function QMQuestManager:StoreQuest(quest)
 
         doc:CompleteChange("Added quest", {undoable = false})
     end
+    return quest
 end
 
 --- Deletes a quest and all its associated data

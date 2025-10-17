@@ -40,7 +40,9 @@ end
 function QMQuestTrackerPanel:_buildMainPanel()
     local questTrackerPanel = self
     return gui.Panel {
-        width = "100%",
+        id = "questTrackerController",
+        classes = {"questTrackerController"},
+        width = "96%",
         height = "auto",
         flow = "vertical",
         styles = questTrackerPanel:_getMainStyles(),
@@ -50,6 +52,15 @@ function QMQuestTrackerPanel:_buildMainPanel()
         end,
         show = function(element)
             questTrackerPanel:_refreshPanelContent(element)
+        end,
+        openQuest = function(element, questId)
+            local quest = questTrackerPanel.questManager:GetQuest(questId)
+            if quest then
+                local questManagerWindow = QMQuestManagerWindow:new(quest)
+                if questManagerWindow then
+                    questManagerWindow:Show()
+                end
+            end
         end,
         children = {
             self:_buildHeaderPanel(),
@@ -91,20 +102,21 @@ function QMQuestTrackerPanel:_buildHeaderPanel()
             --         self.questManager:InitializeDocument()
             --     end
             -- },
-            gui.Button {
-                text = "DEBUG",
-                width = 60,
-                height = 30,
-                halign = "right",
-                valign = "center",
-                hmargin = 5,
-                linger = function(element)
-                    gui.Tooltip("Debug document contents")(element)
-                end,
-                click = function(element)
-                    self:_debugDocument()
-                end
-            },
+            -- gui.Button {
+            --     text = "DEBUG",
+            --     width = 60,
+            --     height = 30,
+            --     halign = "right",
+            --     valign = "center",
+            --     hmargin = 5,
+            --     linger = function(element)
+            --         gui.Tooltip("Debug document contents")(element)
+            --     end,
+            --     click = function(element)
+            --         print("THC::", element)
+            --         self:_debugDocument()
+            --     end
+            -- },
             gui.AddButton {
                 halign = "right",
                 valign = "center",
@@ -112,7 +124,15 @@ function QMQuestTrackerPanel:_buildHeaderPanel()
                     gui.Tooltip("Add a new quest")(element)
                 end,
                 click = function(element)
-                    self:_showNewQuestDialog()
+                    local quest = self.questManager:CreateQuest()
+                    if quest then
+                        local controller = element:FindParentWithClass("questTrackerController")
+                        if controller then
+                            dmhub.Schedule(0.3, function()
+                                controller:FireEvent("openQuest", quest:GetID())
+                            end)
+                        end
+                    end
                 end
             }
         }
@@ -139,9 +159,28 @@ function QMQuestTrackerPanel:_buildContentPanel()
                 textAlignment = "center"
             }
         else
-            -- Group quests by category
-            local questsByCategory = {}
+            -- Separate quests into titled and untitled
+            local titledQuests = {}
+            local untitledQuests = {}
             for _, quest in pairs(allQuests) do
+                if self:_isQuestUntitled(quest) then
+                    table.insert(untitledQuests, quest)
+                else
+                    table.insert(titledQuests, quest)
+                end
+            end
+
+            local hasAnyContent = false
+
+            -- Add untitled quests section first (if any)
+            if #untitledQuests > 0 then
+                questChildren[#questChildren + 1] = self:_buildUntitledQuestsSection(untitledQuests)
+                hasAnyContent = true
+            end
+
+            -- Group titled quests by category
+            local questsByCategory = {}
+            for _, quest in pairs(titledQuests) do
                 local category = quest:GetCategory() or QMQuest.CATEGORY.MAIN
                 if not questsByCategory[category] then
                     questsByCategory[category] = {}
@@ -159,16 +198,15 @@ function QMQuestTrackerPanel:_buildContentPanel()
             }
 
             -- Create collapsible sections for each category that has quests
-            local hasQuests = false
             for _, categoryId in ipairs(categoryOrder) do
                 local categoryQuests = questsByCategory[categoryId]
                 if categoryQuests and #categoryQuests > 0 then
-                    if hasQuests then
-                        -- Add spacing between categories
+                    if hasAnyContent then
+                        -- Add spacing between sections
                         questChildren[#questChildren + 1] = gui.Divider { width = "80%" }
                     end
                     questChildren[#questChildren + 1] = self:_buildCategorySection(categoryId, categoryQuests)
-                    hasQuests = true
+                    hasAnyContent = true
                 end
             end
         end
@@ -191,11 +229,23 @@ function QMQuestTrackerPanel:_buildContentPanel()
     }
 end
 
+--- Checks if a quest is considered untitled (nil, empty, or whitespace-only title)
+--- @param quest QMQuest The quest to check
+--- @return boolean true if the quest is untitled
+function QMQuestTrackerPanel:_isQuestUntitled(quest)
+    local title = quest:GetTitle()
+    return not title or title:trim() == ""
+end
+
 --- Builds a single quest item display
 --- @param quest QMQuest The quest to display
+--- @param untitledDisplayText string Optional display text for untitled quests
 --- @return table panel The quest item panel
-function QMQuestTrackerPanel:_buildQuestItem(quest)
-    local title = quest:GetTitle() or "Untitled Quest"
+function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
+    local title = quest:GetTitle()
+    if self:_isQuestUntitled(quest) then
+        title = untitledDisplayText or "Untitled Quest"
+    end
     local status = quest:GetStatus() or "unknown"
     local priority = quest:GetPriority() or "unknown"
 
@@ -208,8 +258,8 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
             valign = "center",
             hmargin = 2,
             classes = {"quest-edit-button"},
-            press = function()
-                self:_showEditQuestDialog(quest.id)
+            press = function(element)
+                element:FireEventOnParents("openQuest", quest:GetID())
             end
         }
     }
@@ -225,7 +275,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
             classes = {"quest-delete-button"},
             click = function()
                 QMUIUtils.ShowDeleteConfirmation("quest", title, function()
-                    self.questManager:DeleteQuest(quest.id)
+                    self.questManager:DeleteQuest(quest:GetID())
                 end)
             end
         }
@@ -236,9 +286,6 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
         height = 50,
         flow = "horizontal",
         classes = {"quest-item", "quest-" .. status, "priority-" .. priority},
-        -- click = function()
-        --     self:_showEditQuestDialog(quest.id)
-        -- end,
         children = {
             -- Status indicator
             gui.Panel {
@@ -285,6 +332,31 @@ function QMQuestTrackerPanel:_buildQuestItem(quest)
                 children = actionButtons
             }
         }
+    }
+end
+
+--- Builds a section for untitled quests without a category header
+--- @param untitledQuests table Array of QMQuest instances that are untitled
+--- @return table panel The untitled quests section panel
+function QMQuestTrackerPanel:_buildUntitledQuestsSection(untitledQuests)
+    local questChildren = {}
+
+    -- Add quest items with dividers
+    for i, quest in ipairs(untitledQuests) do
+        -- Add divider before quest (except first one)
+        if i > 1 then
+            questChildren[#questChildren + 1] = gui.Divider { width = "80%" }
+        end
+        -- Quest item with "(New Quest)" display text
+        questChildren[#questChildren + 1] = self:_buildQuestItem(quest, "(New Quest)")
+    end
+
+    return gui.Panel{
+        width = "100%",
+        height = "auto",
+        flow = "vertical",
+        classes = {"untitled-quests-section"},
+        children = questChildren
     }
 end
 
@@ -596,29 +668,6 @@ function QMQuestTrackerPanel:_getMainStyles()
             borderColor = Styles.black
         }
     }
-end
-
---- Shows the Quest Manager window with the quest loaded
---- @param quest QMQuest The quest to mange
-function QMQuestTrackerPanel:_showQuestDialog(quest)
-    local questManagerWindow = QMQuestManagerWindow:new(self.questManager, quest)
-    if questManagerWindow then
-        questManagerWindow:Show()
-    end
-end
-
---- Shows the quest dialog for creating new quests
-function QMQuestTrackerPanel:_showNewQuestDialog()
-    self:_showQuestDialog(QMQuest:new())
-end
-
---- Shows the quest dialog for editing existing quests
---- @param questId string The ID of the quest to edit
-function QMQuestTrackerPanel:_showEditQuestDialog(questId)
-    local quest = self.questManager:GetQuest(questId)
-    if quest then
-        self:_showQuestDialog(quest)
-    end
 end
 
 --- Refreshes the panel display to show updated quest data

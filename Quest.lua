@@ -47,12 +47,11 @@ QMQuest.PRIORITY = {
 }
 
 --- Creates a new quest instance
---- @param questId? string GUID identifier for this quest
 --- @return QMQuest instance The new quest instance
-function QMQuest:new(questId)
+function QMQuest:new()
     local instance = setmetatable({}, self)
 
-    instance.id = questId or dmhub.GenerateGuid()
+    instance.id = dmhub.GenerateGuid()
     instance.title = ""
     instance.description = ""
     instance.category = QMQuest.CATEGORY.MAIN
@@ -293,9 +292,7 @@ end
 --- @param objectiveId string The GUID of the objective to remove
 --- @return QMQuest self For chaining
 function QMQuest:RemoveObjective(objectiveId)
-    print("THC:: QUEST:: REMOVEOBJECTIVE::", objectiveId)
     if self.objectives[objectiveId] then
-        print("THC:: REMOVING::")
         self.objectives[objectiveId] = nil
     end
     return self

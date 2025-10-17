@@ -1,7 +1,6 @@
 --- Quest Manager Window - Main windowed interface with tabbed layout
 --- Provides a resizable, closable window with Quest, Objectives, and Notes tabs
 --- @class QMQuestManagerWindow
---- @field questManager QMQuestManager The quest manager for data operations
 --- @field quest QMQuest The quest we're editing
 --- @field isOpen boolean Whether the window is currently open / displayed
 QMQuestManagerWindow = RegisterGameType("QMQuestManagerWindow")
@@ -90,16 +89,14 @@ QMQuestManagerWindow.TabsStyles = {
 QMQuestManagerWindow.TabOptions = {}
 
 --- Creates a new Quest Manager window instance
---- @param questManager QMQuestManager The quest manager for data operations
 --- @param quest QMQuest The quest object to edit
 --- @return QMQuestManagerWindow|nil instance The new window instance
-function QMQuestManagerWindow:new(questManager, quest)
-    if not questManager or not quest then
+function QMQuestManagerWindow:new(quest)
+    if not quest then
         return nil
     end
 
     local instance = setmetatable({}, self)
-    instance.questManager = questManager
     instance.quest = quest
     instance.isOpen = false
 
@@ -159,12 +156,12 @@ function QMQuestManagerWindow:_createWindow()
     end
 
     -- Tab content panels
-    local questPanel = QMQuestManagerWindow.CreateQuestPanel(self.questManager, self.quest)
+    local questPanel = QMQuestManagerWindow.CreateQuestPanel(self.quest)
 
-    local objectivesPanel = QMQuestManagerWindow.CreateObjectivesPanel(self.questManager, self.quest)
+    local objectivesPanel = QMQuestManagerWindow.CreateObjectivesPanel(self.quest)
     objectivesPanel.classes = {"hidden"}
 
-    local notesPanel = QMQuestManagerWindow.CreateNotesPanel(self.questManager, self.quest)
+    local notesPanel = QMQuestManagerWindow.CreateNotesPanel(self.quest)
     notesPanel.classes = {"hidden"}
 
     local tabPanels = {questPanel, objectivesPanel, notesPanel}
@@ -173,7 +170,7 @@ function QMQuestManagerWindow:_createWindow()
     local contentPanel =
         gui.Panel {
         width = "100%",
-        height = "100%-100",
+        height = "100%",
         flow = "none",
         valign = "top",
         children = tabPanels,
@@ -237,53 +234,6 @@ function QMQuestManagerWindow:_createWindow()
         }
     }
 
-    -- Create the actions panel
-    -- local actionsPanel =
-    --     gui.Panel {
-    --     width = "100%",
-    --     height = 40,
-    --     flow = "horizontal",
-    --     halign = "center",
-    --     valign = "center",
-    --     children = {
-    --         -- Cancel button (first)
-    --         gui.Button {
-    --             text = "Cancel",
-    --             width = 120,
-    --             height = 40,
-    --             hmargin = 20,
-    --             fontSize = 24,
-    --             classes = {"QMButton", "QMBase"},
-    --             click = function(element)
-    --                 gui.CloseModal()
-    --             end
-    --         },
-    --         -- Confirm button (second)
-    --         gui.Button {
-    --             text = "Confirm",
-    --             width = 120,
-    --             height = 40,
-    --             hmargin = 20,
-    --             fontSize = 24,
-    --             classes = {"QMButton", "QMBase"},
-    --             click = function(element)
-    --                 local confirmOverwrite = function()
-    --                     self.questManager:StoreQuest(self.quest)
-    --                     gui.CloseModal()
-    --                 end
-    --                 local lastModified = self.questManager:GetQuestLastModified(self.quest:GetID())
-    --                 if lastModified and lastModified > self.quest:GetModifiedTimestamp() then
-    --                     local title = "Overwrite Confirmation"
-    --                     local message = "This quest has been modified since you loaded it. Do you want to overwrite it?"
-    --                     QMUIUtils.ShowConfirmationDialog(title, message, "Overwrite", "", confirmOverwrite, nil)
-    --                 else
-    --                     confirmOverwrite()
-    --                 end
-    --             end
-    --         }
-    --     }
-    -- }
-
     return gui.Panel {
         id = "questManagerWindow",
         width = 1200,
@@ -313,7 +263,7 @@ function QMQuestManagerWindow:_createWindow()
                 flow = "vertical",
                 children = {
                     tabsPanel,
-                    contentPanel,
+                    contentPanel
                     -- actionsPanel
                 }
             },
@@ -345,8 +295,8 @@ QMQuestManagerWindow.RegisterTab {
     id = "Quest",
     text = "Quest",
     order = 1,
-    panel = function(questManager, quest)
-        return QMQuestManagerWindow.CreateQuestPanel(questManager, quest)
+    panel = function(quest)
+        return QMQuestManagerWindow.CreateQuestPanel(quest)
     end
 }
 
@@ -354,8 +304,8 @@ QMQuestManagerWindow.RegisterTab {
     id = "Objectives",
     text = "Objectives",
     order = 2,
-    panel = function(questManager, quest)
-        return QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
+    panel = function(quest)
+        return QMQuestManagerWindow.CreateObjectivesPanel(quest)
     end
 }
 
@@ -363,16 +313,15 @@ QMQuestManagerWindow.RegisterTab {
     id = "Notes",
     text = "Notes",
     order = 3,
-    panel = function(questManager, quest)
-        return QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
+    panel = function(quest)
+        return QMQuestManagerWindow.CreateNotesPanel(quest)
     end
 }
 
 --- Creates the Quest tab panel
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object to display/edit
 --- @return table panel The quest panel
-function QMQuestManagerWindow.CreateQuestPanel(questManager, quest)
+function QMQuestManagerWindow.CreateQuestPanel(quest)
     return gui.Panel {
         id = "questPanel",
         width = "100%",
@@ -388,35 +337,27 @@ function QMQuestManagerWindow.CreateQuestPanel(questManager, quest)
             }
         },
         children = {
-            QMQuestManagerWindow._buildQuestForm(questManager, quest)
+            QMQuestManagerWindow._buildQuestForm(quest)
         }
     }
 end
 
 --- Creates the Objectives tab panel
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object to display/edit
 --- @return table panel The objectives panel
-function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
-    local function buildObjectivesList()
+function QMQuestManagerWindow.CreateObjectivesPanel(quest)
+
+    local function reconcileObjectivesList(objectivePanels)
+        objectivePanels = objectivePanels or {}
+        if type(objectivePanels) ~= "table" then
+            objectivePanels = {}
+        end
+
         local objectives = quest:GetObjectivesSorted()
-        local objectiveChildren = {}
 
-        if next(objectives) then
-            local isFirstItem = true
-            for _, objective in pairs(objectives) do
-                -- Add divider before objective (except first one)
-                if not isFirstItem then
-                    objectiveChildren[#objectiveChildren + 1] = gui.Divider {width = "90%", vmargin = 2}
-                end
-                isFirstItem = false
-
-                -- Objective item
-                objectiveChildren[#objectiveChildren + 1] = QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
-            end
-        else
-            objectiveChildren[#objectiveChildren + 1] =
-                gui.Label {
+        -- Handle empty objectives case
+        if not next(objectives) then
+            local emptyMessage = gui.Label {
                 text = "No objectives yet.",
                 width = "100%",
                 height = "100%",
@@ -426,9 +367,54 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                 classes = {"QMLabel", "QMBase"},
                 bold = false
             }
+            return {emptyMessage}
         end
 
-        return objectiveChildren
+        -- Step 1: Remove children that don't have corresponding objectives (iterate backwards)
+        for i = #objectivePanels, 1, -1 do
+            local child = objectivePanels[i]
+            if child.id then
+                local foundObjective = false
+                for _, objective in pairs(objectives) do
+                    if objective:GetID() == child.id then
+                        foundObjective = true
+                        break
+                    end
+                end
+                if not foundObjective then
+                    table.remove(objectivePanels, i)
+                end
+            end
+        end
+
+        -- Step 2: Add panels for objectives that don't have children
+        for _, objective in pairs(objectives) do
+            local foundChild = false
+            for _, child in ipairs(objectivePanels) do
+                if child.id == objective:GetID() then
+                    foundChild = true
+                    break
+                end
+            end
+            if not foundChild then
+                objectivePanels[#objectivePanels + 1] = QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
+            end
+        end
+
+        -- Step 3: Sort children to match objectives order
+        -- Build order lookup table first
+        local orderLookup = {}
+        for i, objective in ipairs(objectives) do
+            orderLookup[objective:GetID()] = i
+        end
+
+        table.sort(objectivePanels, function(a, b)
+            local aOrder = orderLookup[a.id] or 999
+            local bOrder = orderLookup[b.id] or 999
+            return aOrder < bOrder
+        end)
+
+        return objectivePanels
     end
 
     return gui.Panel {
@@ -444,7 +430,7 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
             -- TODO: We should remove this in favor of a reconcile
             local scrollArea = element:Get("objectivesScrollArea")
             if scrollArea then
-                scrollArea.children = buildObjectivesList()
+                scrollArea.children = reconcileObjectivesList(scrollArea.children) --buildObjectivesList()
             end
         end,
         children = {
@@ -462,32 +448,10 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                         flow = "vertical",
                         valign = "top",
                         refreshQuest = function(element)
-                            --[[ TODO:
-                                Reconcile the list of objective panels in our children with the list of
-                                objectives, treating the objectives list as accurate and the UI as
-                                inaccurate.
-                                UI panels are keyed by id = objective:GetID() and we can find and remove
-                                and add them with the following:
-                                    local editorPanel = element:Get(objective:GetID()) -- Gets the pane with id = the passed value or nil if it doesn't exist
-                                    element:RemoveChild(editorPanel) -- Removes the panel from the list of children
-                                    element.children[#element.children + 1] = QMQuestManagerWindow.CreateObjectiveItem(quest, objective) -- Create and add a panel
-                                If a panel exists in children and does not list in objectives, remove it.
-                                If a panel exists in objectives but does not exist in objectives, add it.
-                            ]]
-                            local objectives = quest:GetObjectivesSorted()
-                        end,
-                        deleteObjective = function(element, objectiveId)
-                            -- TODO: We should actually respond to the refreshQuest event to remove the pane
-                            local editorPane = element:Get(objectiveId)
-                            element:RemoveChild(editorPane)
-                            updateNetworkDoc(
-                                function()
-                                    quest:RemoveObjective(objectiveId)
-                                end
-                            )
+                            element.children = reconcileObjectivesList(element.children)
                         end,
                         children = {
-                            table.unpack(buildObjectivesList())
+                            table.unpack(reconcileObjectivesList({}))
                         }
                     }
                 }
@@ -501,10 +465,7 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
                     gui.Tooltip("Add a new objective")(element)
                 end,
                 click = function(element)
-                    quest:AddObjective()
-                    if QMQuestManagerWindow.instance then
-                        QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
-                    end
+                    updateNetworkDoc(function() quest:AddObjective() end)
                 end
             }
         }
@@ -512,10 +473,9 @@ function QMQuestManagerWindow.CreateObjectivesPanel(questManager, quest)
 end
 
 --- Creates the Notes tab panel
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object to display/edit
 --- @return table panel The notes panel
-function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
+function QMQuestManagerWindow.CreateNotesPanel(quest)
     local function buildNotesList()
         local notes = quest:GetNotes()
         local noteChildren = {}
@@ -548,6 +508,76 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
         return noteChildren
     end
 
+    local function reconcileNotesList(notePanels)
+        notePanels = notePanels or {}
+        if type(notePanels) ~= "table" then
+            notePanels = {}
+        end
+
+        local notes = quest:GetNotes()
+
+        -- Handle empty notes case
+        if not next(notes) then
+            local emptyMessage = gui.Label {
+                text = "No notes yet.",
+                width = "100%",
+                height = "100%",
+                halign = "center",
+                valign = "center",
+                textAlignment = "center",
+                classes = {"QMLabel", "QMBase"},
+                bold = false
+            }
+            return {emptyMessage}
+        end
+
+        -- Step 1: Remove panels that don't have corresponding notes (iterate backwards)
+        for i = #notePanels, 1, -1 do
+            local child = notePanels[i]
+            if child.id then
+                local foundNote = false
+                for _, note in pairs(notes) do
+                    if note:GetID() == child.id then
+                        foundNote = true
+                        break
+                    end
+                end
+                if not foundNote then
+                    table.remove(notePanels, i)
+                end
+            end
+        end
+
+        -- Step 2: Add panels for notes that don't have panels
+        for _, note in pairs(notes) do
+            local foundPanel = false
+            for _, panel in ipairs(notePanels) do
+                if panel.id == note:GetID() then
+                    foundPanel = true
+                    break
+                end
+            end
+            if not foundPanel then
+                notePanels[#notePanels + 1] = QMQuestManagerWindow.CreateNoteItem(quest, note)
+            end
+        end
+
+        -- Step 3: Sort panels by reverse chronological order (newest first)
+        -- Build timestamp lookup table first
+        local timestampLookup = {}
+        for _, note in pairs(notes) do
+            timestampLookup[note:GetID()] = note:GetCreatedAt() or ""
+        end
+
+        table.sort(notePanels, function(a, b)
+            local a = timestampLookup[a.id] or ""
+            local b = timestampLookup[b.id] or ""
+            return a > b  -- Reverse chronological
+        end)
+
+        return notePanels
+    end
+
     return gui.Panel {
         id = "notesPanel",
         width = "98%",
@@ -557,12 +587,6 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
         hpad = 20,
         vpad = 20,
         styles = QMUIUtils.GetDialogStyles(),
-        refreshNotes = function(element)
-            local scrollArea = element:Get("notesScrollArea")
-            if scrollArea then
-                scrollArea.children = buildNotesList()
-            end
-        end,
         children = {
             -- Scrollable notes area
             gui.Panel {
@@ -577,7 +601,10 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
                         height = "auto",
                         flow = "vertical",
                         valign = "top",
-                        children = buildNotesList()
+                        refreshQuest = function(element)
+                            element.children = reconcileNotesList(element.children)
+                        end,
+                        children = reconcileNotesList({}), --buildNotesList()
                     }
                 }
             },
@@ -590,7 +617,7 @@ function QMQuestManagerWindow.CreateNotesPanel(questManager, quest)
                     gui.Tooltip("Add a new note")(element)
                 end,
                 click = function(element)
-                    QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+                    QMQuestManagerWindow.ShowAddNoteDialog(quest)
                 end
             }
         }
@@ -602,6 +629,7 @@ end
 --- @param note QMQuestNote The note to display
 --- @return table panel The note item panel
 function QMQuestManagerWindow.CreateNoteItem(quest, note)
+    local id = note:GetID() or ""
     local content = note:GetContent() or ""
     local authorId = note:GetAuthorId() or "Unknown"
     local timestamp = note:GetCreatedAt() or ""
@@ -640,10 +668,7 @@ function QMQuestManagerWindow.CreateNoteItem(quest, note)
                     "note",
                     "this note",
                     function()
-                        quest:RemoveNote(note.id)
-                        if QMQuestManagerWindow.instance then
-                            QMQuestManagerWindow.instance:FireEventTree("refreshNotes")
-                        end
+                        updateNetworkDoc(function() quest:RemoveNote(note.id) end)
                     end
                 )
             end
@@ -651,6 +676,7 @@ function QMQuestManagerWindow.CreateNoteItem(quest, note)
     end
 
     return gui.Panel {
+        id = id,
         width = "90%",
         height = "auto",
         flow = "vertical",
@@ -804,17 +830,18 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                     "objective",
                     title,
                     function()
-                        -- quest:RemoveObjective(objective.id)
-                        if QMQuestManagerWindow.instance then
-                            QMQuestManagerWindow.instance:FireEventTree("deleteObjective", objective:GetID())
-                        end
+                        updateNetworkDoc(
+                            function()
+                                quest:RemoveObjective(objective:GetID())
+                            end
+                        )
                     end
                 )
             end
         }
     end
 
-    return gui.Panel {
+    local objectivePanel = gui.Panel {
         id = id,
         width = "100%",
         height = "auto",
@@ -840,10 +867,15 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                         classes = {"QMInput", "QMBase"},
                         text = title,
                         placeholderText = "Enter objective title...",
-                        editlag = 0.25,
+                        editlag = 0.5,
+                        refreshQuest = function(element)
+                            if element.text ~= objective:GetTitle() then
+                                element.text = objective:GetTitle()
+                            end
+                        end,
                         edit = function(element)
-                            if objective:GetTitle() ~= element.text then
-                                objective:SetTitle(element.text)
+                            if element.text ~= objective:GetTitle() then
+                                updateNetworkDoc(function() objective:SetTitle(element.text) end)
                             end
                         end
                     },
@@ -855,13 +887,14 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                         classes = {"QMDropdown", "QMBase"},
                         options = statusOptions,
                         idChosen = status,
+                        refreshQuest = function(element)
+                            if element.idChosen ~= objective:GetStatus() then
+                                element.idChosen = objective:GetStatus()
+                            end
+                        end,
                         change = function(element)
-                            local newStatus = element.idChosen
-                            if objective:GetStatus() ~= newStatus then
-                                objective:SetStatus(newStatus)
-                                if QMQuestManagerWindow.instance then
-                                    QMQuestManagerWindow.instance:FireEventTree("refreshObjectives")
-                                end
+                            if element.idChosen ~= objective:GetStatus() then
+                                updateNetworkDoc(function() objective:SetStatus(element.idChosen) end)
                             end
                         end
                     },
@@ -878,22 +911,28 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                 placeholderText = "Enter objective description...",
                 multiline = true,
                 textAlignment = "topleft",
-                editlag = 0.25,
+                editlag = 0.5,
                 vmargin = 5,
+                refreshText = function(element)
+                    if element.text ~= quest:GetDescription() then
+                        element.text = quest:GetDescription()
+                    end
+                end,
                 edit = function(element)
-                    if objective:GetDescription() ~= element.text then
-                        objective:SetDescription(element.text)
+                    if element.text ~= quest:GetDescription() then
+                        updateNetworkDoc(function() objective:SetDescription(element.text) end)
                     end
                 end
             }
         }
     }
+
+    return objectivePanel
 end
 
 --- Shows the add note dialog
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object
-function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
+function QMQuestManagerWindow.ShowAddNoteDialog(quest)
     local noteContent = ""
 
     local addNoteWindow =
@@ -962,10 +1001,7 @@ function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
                         classes = {"QMButton", "QMBase"},
                         click = function(element)
                             if noteContent and noteContent:trim() ~= "" then
-                                quest:AddNote(noteContent)
-                                if QMQuestManagerWindow.instance then
-                                    QMQuestManagerWindow.instance:FireEventTree("refreshNotes")
-                                end
+                                updateNetworkDoc(function() quest:AddNote(noteContent) end)
                             end
                             gui.CloseModal()
                         end
@@ -982,10 +1018,9 @@ function QMQuestManagerWindow.ShowAddNoteDialog(questManager, quest)
 end
 
 --- Builds the quest form for the Quest tab
---- @param questManager QMQuestManager The quest manager instance
 --- @param quest QMQuest The quest object to display/edit
 --- @return table panel The quest form panel
-function QMQuestManagerWindow._buildQuestForm(questManager, quest)
+function QMQuestManagerWindow._buildQuestForm(quest)
     -- Create form field elements
     local titleField =
         gui.Input {
@@ -994,7 +1029,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         text = quest:GetTitle() or "New Quest",
         placeholderText = "Enter quest title...",
         lineType = "Single",
-        editlag = 0.25,
+        editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetTitle() then
                 element.text = quest:GetTitle()
@@ -1020,7 +1055,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         placeholderText = "Enter quest description...",
         multiline = true,
         textAlignment = "topleft",
-        editlag = 0.25,
+        editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetDescription() then
                 element.text = quest:GetDescription()
@@ -1044,7 +1079,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         text = quest:GetQuestGiver() or "",
         placeholderText = "Who gave this quest?",
         lineType = "Single",
-        editlag = 0.25,
+        editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetQuestGiver() then
                 element.text = quest:GetQuestGiver()
@@ -1068,7 +1103,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         text = quest:GetLocation() or "",
         placeholderText = "Where does this quest take place?",
         lineType = "Single",
-        editlag = 0.25,
+        editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetLocation() then
                 element.Text = quest:GetLocation()
@@ -1092,7 +1127,7 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         text = quest:GetRewards() or "",
         placeholderText = "What rewards does this quest offer?",
         lineType = "Single",
-        editlag = 0.25,
+        editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetRewards() then
                 element.text = quest:GetRewards()
@@ -1223,7 +1258,11 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
         end,
         change = function(element)
             if element.value ~= quest:GetVisibleToPlayers() then
-                updateNetworkDoc(function() quest:SetVisibleToPlayers(element.value) end)
+                updateNetworkDoc(
+                    function()
+                        quest:SetVisibleToPlayers(element.value)
+                    end
+                )
             end
         end
     }
@@ -1269,19 +1308,6 @@ function QMQuestManagerWindow._buildQuestForm(questManager, quest)
                             visibleToPlayersCheckbox
                         }
                     },
-                    gui.Button {
-                        -- THC::
-                        text = "test",
-                        width = 60,
-                        height = 20,
-                        click = function(element)
-                            updateNetworkDoc(
-                                function()
-                                    quest:SetTitle(quest:GetTitle() .. "12345")
-                                end
-                            )
-                        end
-                    }
                 }
             },
             -- Description field

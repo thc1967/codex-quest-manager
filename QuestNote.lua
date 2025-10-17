@@ -20,6 +20,12 @@ function QMQuestNote:new(content)
     return instance
 end
 
+--- Gets the unique identifier for this note
+--- @return string id The unique identifier for this note
+function QMQuestNote:GetID()
+    return self.id
+end
+
 --- Gets the author ID who created this note
 --- @return string authorId The Codex player ID of the note author
 function QMQuestNote:GetAuthorId()
