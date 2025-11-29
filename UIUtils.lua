@@ -358,7 +358,7 @@ end
 --- @param itemType string The type of item being deleted ("quest", "note", "objective")
 --- @param itemTitle string The display name/title of the item being deleted
 --- @param onConfirm function Callback function to execute if user confirms deletion
---- @param onCancel function Optional callback function to execute if user cancels (default: just close dialog)
+--- @param onCancel? function Optional callback function to execute if user cancels (default: just close dialog)
 function QMUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCancel)
     local title = "Delete Confirmation"
     local message = "Are you sure you want to delete " .. itemType .. " \"" .. (itemTitle or "Untitled") .. "\"?"

@@ -65,6 +65,22 @@ function QMQuestManager:GetQuest(questId)
     return nil
 end
 
+--- Gets a quest by its name (case insensitive) with visibility checks applied
+--- @param questTitle string The name of the quest to find
+--- @return QMQuest|nil instance The quest instance or nil if not found or not visible
+function QMQuestManager:GetQuestByTitle(questTitle)
+    local doc = self:_safeDoc()
+    if doc and questTitle then
+        local lowerName = string.lower(questTitle)
+        for _, quest in pairs(doc.data.quests) do
+            if QMQuestManager._questVisibleToUser(quest) and string.lower(quest:GetTitle()) == lowerName then
+                return quest
+            end
+        end
+    end
+    return nil
+end
+
 --- Return the timestamp the quest was last modified or nil if not found
 --- @param questId string The GUID identifier of the quest to evaluate
 --- @return string|osdate|nil lastModified The timestampe the quest was last modified or nil of not found

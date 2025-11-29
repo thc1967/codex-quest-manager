@@ -282,7 +282,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
     end
 
     return gui.Panel {
-        width = "100%",
+        width = "96%",
         height = 50,
         flow = "horizontal",
         classes = {"quest-item", "quest-" .. status, "priority-" .. priority},
