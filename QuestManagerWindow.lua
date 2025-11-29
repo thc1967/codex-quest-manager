@@ -267,6 +267,36 @@ function QMQuestManagerWindow:_createWindow()
                     -- actionsPanel
                 }
             },
+            -- Copy ID button
+            gui.Panel {
+                flow = "horizontal",
+                floating = true,
+                width = 24,
+                height = 24,
+                halign = "right",
+                valign = "top",
+                vmargin = 8,
+                hmargin = 48,
+                bgimage = "icons/icon_app/icon_app_108.png",
+                bgcolor = "white",
+                styles = {{ classes = "parent:hover", brightness = 1.8 }},
+                linger = function(element)
+                    gui.Tooltip {
+                        text = "Copy ID to clipboard",
+                        valign = "top",
+                        borderWidth = 1,
+                    }(element)
+                end,
+                click = function(element)
+                    gui.Tooltip {
+                        text = "Copied!",
+                        valign = "top",
+                        borderWidth = 1,
+                    }(element)
+                    dmhub.CopyToClipboard(self.quest:GetID())
+                end,
+            },
+
             -- X Close button (top right)
             gui.Panel {
                 flow = "horizontal",

@@ -240,6 +240,14 @@ function QMUIUtils.GetPlayerDisplayName(userId)
     return "{unknown}"
 end
 
+--- Determine whether a string matches GUID format
+--- @param str string A potential GUID
+--- @return boolean isGuid Whether the string matches the GUID format
+function QMUIUtils.IsGuid(str)
+    if #str ~= 36 then return false end
+    return str:match("^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") ~= nil
+end
+
 --- Transforms a list of strings into a list of id, text pairs for dropdown lists
 --- @param sourceList table The table to convert
 --- @return table destList The transformed table

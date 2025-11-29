@@ -88,35 +88,6 @@ function QMQuestTrackerPanel:_buildHeaderPanel()
                 classes = {"header-title"},
                 width = "40%"
             },
-            -- gui.Button{
-            --     text = "INIT",
-            --     width = 60,
-            --     height = 30,
-            --     halign = "right",
-            --     valign = "center",
-            --     hmargin = 5,
-            --     linger = function(element)
-            --         gui.Tooltip("Clear all data.")(element)
-            --     end,
-            --     click = function(element)
-            --         self.questManager:InitializeDocument()
-            --     end
-            -- },
-            -- gui.Button {
-            --     text = "DEBUG",
-            --     width = 60,
-            --     height = 30,
-            --     halign = "right",
-            --     valign = "center",
-            --     hmargin = 5,
-            --     linger = function(element)
-            --         gui.Tooltip("Debug document contents")(element)
-            --     end,
-            --     click = function(element)
-            --         print("THC::", element)
-            --         self:_debugDocument()
-            --     end
-            -- },
             gui.AddButton {
                 halign = "right",
                 valign = "center",

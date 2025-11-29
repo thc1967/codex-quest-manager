@@ -7,12 +7,12 @@ end
 if dmhub.isDM then
 
     --- Set the visibility status of a quest
-    --- @param args string Pipe-separated list 1st element is quest name or guid; 2nd element is optional and 1, 0, true, false
+    --- @param args string Colon-separated list 1st element is quest name or guid; 2nd element is optional and 1, 0, true, false
     Commands.questsetvisible = function(args)
         local function parseArgs(str)
             if str == nil or #str == 0 then return nil, nil end
 
-            local questId, visibleStr = str:match("^([^|]+)|?(.*)$")
+            local questId, visibleStr = str:match("^([^:]+):?(.*)$")
 
             local visible = true
             if visibleStr and #visibleStr > 0 then
@@ -23,17 +23,12 @@ if dmhub.isDM then
             return questId:trim(), visible
         end
 
-        local function isGuid(str)
-            if #str ~= 36 then return false end
-            return str:match("^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") ~= nil
-        end
-
         local questId, visible = parseArgs(args)
         if questId and type(visible) == "boolean" then
             local questManager = QMQuestManager:new()
             if questManager then
                 local quest
-                if isGuid(questId) then
+                if QMUIUtils.IsGuid(questId) then
                     quest = questManager:GetQuest(questId)
                 else
                     quest = questManager:GetQuestByTitle(questId)
