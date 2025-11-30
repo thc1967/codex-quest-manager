@@ -50,6 +50,20 @@ local DisplayStyles = {
         valign = "top",
     },
 	{
+		selectors = {"quest-open-icon"},
+		halign = "right",
+		valign = "center",
+        hmargin = 8,
+		width = 16,
+		height = 16,
+		bgimage = "panels/hud/gear.png",
+		bgcolor = "white",
+	},
+    {
+        selectors = {"quest-open-icon", "hover"},
+        brightness = 1.5,
+    },
+	{
 		selectors = {"quest-visible-icon"},
 		halign = "right",
 		valign = "center",
@@ -112,6 +126,19 @@ function RichQuest:CreateDisplay()
         end
     }
 
+    local openButton = gui.Panel{
+        classes = {"quest-open-icon"},
+        swallowPress = true,
+        press = function(element)
+            if m_quest then
+                local questMgrWindow = QMQuestManagerWindow:new(m_quest)
+                if questMgrWindow then
+                    questMgrWindow:Show()
+                end
+            end
+        end,
+    }
+
     local showHide = dmhub.isDM and gui.Panel{
         classes = {"quest-visible-icon"},
         swallowPress = true,
@@ -133,6 +160,7 @@ function RichQuest:CreateDisplay()
         classes = {"quest-header-panel"},
         titleLabel,
         showHide,
+        openButton,
     }
 
     local questGiver = gui.Label{
