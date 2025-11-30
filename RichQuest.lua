@@ -1,3 +1,5 @@
+local mod = dmhub.GetModLoading()
+
 --- @class RichQuest
 RichQuest = RegisterGameType("RichQuest", "Rich Tag")
 RichQuest.tag = "quest"
@@ -39,11 +41,19 @@ local DisplayStyles = {
         flow = "vertical",
     },
     {
+        selectors = {"quest-manager-icon"},
+        halign = "left",
+        valign = "center",
+        hmargin = 4,
+        width = 16,
+        height = 16,
+    },
+    {
         selectors = {"quest-label"},
         textAlignment = "topLeft",
         fontSize = 14,
         minFontSize = 8,
-        hmargin = 2,
+        hmargin = 0,
         height = "auto",
         width = "auto",
         halign = "left",
@@ -53,7 +63,7 @@ local DisplayStyles = {
 		selectors = {"quest-open-icon"},
 		halign = "right",
 		valign = "center",
-        hmargin = 8,
+        hmargin = 12,
 		width = 16,
 		height = 16,
 		bgimage = "panels/hud/gear.png",
@@ -110,9 +120,15 @@ function RichQuest:CreateDisplay()
         return string.format("%s (%s)", title, status)
     end
 
+    local qmIcon = gui.Panel{
+        classes = {"quest-manager-icon"},
+        bgimage = mod.images.questManager,
+        bgcolor = "white",
+    }
+
     local titleLabel = gui.Label{
         classes = {"quest-label"},
-        width = "90%",
+        width = "84%",
         refreshTag = function(element)
             local title = "Unknown Quest"
             local priority = "?"
@@ -158,6 +174,7 @@ function RichQuest:CreateDisplay()
 
     local headerPanel = gui.Panel{
         classes = {"quest-header-panel"},
+        qmIcon,
         titleLabel,
         showHide,
         openButton,
