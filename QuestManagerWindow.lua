@@ -1,3 +1,5 @@
+local mod = dmhub.GetModLoading()
+
 --- Quest Manager Window - Main windowed interface with tabbed layout
 --- Provides a resizable, closable window with Quest, Objectives, and Notes tabs
 --- @class QMQuestManagerWindow
@@ -809,8 +811,7 @@ end
 local CreateObjectiveDragHandle = function(quest, objective)
     return gui.Panel {
         classes = {"objective-drag-handle"},
-        width = 24,
-        height = 24,
+        bgimage = mod.images.qmHandle,
         halign = "left",
         valign = "center",
         hmargin = 4,

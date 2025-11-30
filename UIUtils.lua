@@ -197,24 +197,26 @@ function QMUIUtils.GetDialogStyles()
         -- Objective drag handle styles
         gui.Style{
             selectors = {"objective-drag-handle"},
-            width = 24,
-            height = 24,
-            bgcolor = "#444444aa",
-            bgimage = "panels/square.png",
+            width = 36,
+            height = 36,
+            bgcolor = "#bb9a7a",
             transitionTime = 0.2
         },
         gui.Style{
             selectors = {"objective-drag-handle", "hover"},
-            bgcolor = "#666666cc"
+            borderColor = "#999999",
+            borderWidth = 1,
         },
         gui.Style{
             selectors = {"objective-drag-handle", "dragging"},
-            bgcolor = "#888888ff",
+            borderColor = "#cccccc",
+            borderWidth = 2,
             opacity = 0.8
         },
         gui.Style{
             selectors = {"objective-drag-handle", "drag-target"},
-            bgcolor = "#4CAF50aa"
+            borderColor = "#4caf50",
+            borderWidth = 1,
         },
     }
 end
