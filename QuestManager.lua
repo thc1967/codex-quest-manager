@@ -4,7 +4,6 @@
 --- @field mod table The Codex mod loading instance
 --- @field documentName string The name of the document used for quest storage
 QMQuestManager = RegisterGameType("QMQuestManager")
-QMQuestManager.__index = QMQuestManager
 
 -- Module-level document monitor for persistence (like ZenHeroTokens pattern)
 local mod = dmhub.GetModLoading()
@@ -12,11 +11,11 @@ local documentName = "QMQuestLog"
 
 --- Creates a new quest manager instance
 --- @return QMQuestManager instance The new quest manager instance
-function QMQuestManager:new()
-    local instance = setmetatable({}, self)
-    instance.mod = mod
-    instance.documentName = documentName
-    return instance
+function QMQuestManager.CreateNew()
+    return QMQuestManager.new{
+        mod = mod,
+        documentName = documentName,
+    }
 end
 
 --- Initializes the quest log with the default structure
@@ -43,7 +42,7 @@ end
 --- Creates and stores a quest in the manager then returns it
 --- @return QMQuest|nil quest The newly created quest or nil if we can't create or store one
 function QMQuestManager:CreateQuest()
-    local quest = QMQuest:new()
+    local quest = QMQuest.CreateNew()
     if quest then
         self:StoreQuest(quest)
         return self:GetQuest(quest:GetID())

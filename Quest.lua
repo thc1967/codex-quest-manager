@@ -19,7 +19,6 @@
 --- @field createdAt string|osdate The ISO 8601 UTC timestamp
 --- @field modifiedAt string|osdate The ISO 8601 UTC timestamp
 QMQuest = RegisterGameType("QMQuest")
-QMQuest.__index = QMQuest
 
 --- Valid status values for quests
 QMQuest.STATUS = {
@@ -46,29 +45,27 @@ QMQuest.PRIORITY = {
     LOW = "Low"
 }
 
+QMQuest.title = ""
+QMQuest.description = ""
+QMQuest.category = QMQuest.CATEGORY.MAIN
+QMQuest.status = QMQuest.STATUS.NOT_STARTED
+QMQuest.priority = QMQuest.PRIORITY.MEDIUM
+QMQuest.questGiver = ""
+QMQuest.location = ""
+QMQuest.rewards = ""
+QMQuest.rewardsClaimed = false
+
 --- Creates a new quest instance
 --- @return QMQuest instance The new quest instance
-function QMQuest:new()
-    local instance = setmetatable({}, self)
-
-    instance.id = dmhub.GenerateGuid()
-    instance.title = ""
-    instance.description = ""
-    instance.category = QMQuest.CATEGORY.MAIN
-    instance.status = QMQuest.STATUS.NOT_STARTED
-    instance.priority = QMQuest.PRIORITY.MEDIUM
-    instance.questGiver = ""
-    instance.location = ""
-    instance.rewards = ""
-    instance.rewardsClaimed = false
-    instance.visibleToPlayers = (not dmhub.isDM)
-    instance.objectives = {}
-    instance.notes = {}
-    instance.createdBy = dmhub.userid
-    instance.createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    instance.modifiedAt = nil
-
-    return instance
+function QMQuest.CreateNew()
+    return QMQuest.new{
+        id = dmhub.GenerateGuid(),
+        visibleToPlayers = (not dmhub.isDM),
+        objectives = {},
+        notes = {},
+        createdBy = dmhub.userid,
+        createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    }
 end
 
 --- Gets the identifier of this quest
@@ -283,7 +280,7 @@ end
 --- @return QMQuestObjective objective The newly created objective
 function QMQuest:AddObjective()
     local nextOrder = self:_maxObjectiveOrder() + 1
-    local objective = QMQuestObjective:new(nextOrder)
+    local objective = QMQuestObjective.CreateNew(nextOrder)
     self.objectives[objective:GetID()] = objective
     return objective
 end
@@ -316,7 +313,7 @@ end
 --- @param content string The note content
 --- @return QMQuestNote note The newly created note
 function QMQuest:AddNote(content)
-    local note = QMQuestNote:new(content)
+    local note = QMQuestNote.CreateNew(content)
     self.notes[note.id] = note
     return note
 end

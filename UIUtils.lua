@@ -28,7 +28,6 @@ function QMUIUtils.CreateLabeledCheckbox(checkboxOptions, panelOptions)
         width = 160,
         halign = "left",
         valign = "center",
-        classes = {"QMCheck", "QMBase"}
     }
 
     -- Merge checkbox options
@@ -70,7 +69,6 @@ function QMUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOption
     local dropdownDefaults = {
         width = "80%",
         halign = "left",
-        classes = {"QMDropdown", "QMBase"}
     }
 
     -- Merge dropdown options
@@ -86,7 +84,7 @@ function QMUIUtils.CreateLabeledDropdown(labelText, dropdownOptions, panelOption
         children = {
             gui.Label{
                 text = labelText,
-                classes = {"QMLabel", "QMBase"},
+                classes = {"bold"},
                 width = "100%",
                 height = 20
             },
@@ -117,7 +115,6 @@ function QMUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
     -- Default input options
     local inputDefaults = {
         width = "100%",
-        classes = {"QMInput", "QMBase"},
         lineType = "Single",
         editlag = 0.25
     }
@@ -141,83 +138,12 @@ function QMUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
         children = {
             gui.Label{
                 text = labelText,
-                classes = {"QMLabel", "QMBase"},
+                classes = {"bold"},
                 width = "100%",
                 height = 20
             },
             gui.Input(inputDefaults)
         }
-    }
-end
-
---- Gets the standardized styling configuration for Quest Manager dialogs
---- Provides consistent styling across all Quest Manager UI components
---- @return table styles Array of GUI styles using QMBase inheritance pattern
-function QMUIUtils.GetDialogStyles()
-    return {
-        -- QMBase: Foundation style for all Quest Manager controls
-        gui.Style{
-            selectors = {"QMBase"},
-            fontSize = 18,
-            fontFace = "Berling",
-            color = Styles.textColor,
-            height = 40,
-        },
-
-        -- QM Control Types: Inherit from QMBase, add specific properties
-        gui.Style{
-            selectors = {"QMLabel", "QMBase"},
-            bold = true,
-            textAlignment = "left"
-        },
-        gui.Style{
-            selectors = {"QMInput", "QMBase"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"QMDropdown", "QMBase"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor
-        },
-        gui.Style{
-            selectors = {"QMCheck", "QMBase"},
-            -- Inherits all QMBase properties
-        },
-        gui.Style{
-            selectors = {"QMButton", "QMBase"},
-            fontSize = 22,
-            textAlignment = "center",
-            bold = true,
-            height = 35  -- Override QMBase height for buttons
-        },
-
-        -- Objective drag handle styles
-        gui.Style{
-            selectors = {"objective-drag-handle"},
-            width = 36,
-            height = 36,
-            bgcolor = "#bb9a7a",
-            transitionTime = 0.2
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "hover"},
-            borderColor = "#999999",
-            borderWidth = 1,
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "dragging"},
-            borderColor = "#cccccc",
-            borderWidth = 2,
-            opacity = 0.8
-        },
-        gui.Style{
-            selectors = {"objective-drag-handle", "drag-target"},
-            borderColor = "#4caf50",
-            borderWidth = 1,
-        },
     }
 end
 
@@ -263,115 +189,3 @@ function QMUIUtils.ListToDropdownOptions(sourceList)
     return destList
 end
 
---- Shows a generic confirmation dialog with customizable title and message
---- @param title string The title text for the dialog header
---- @param message string The main confirmation message text
---- @param confirmButtonText string Optional text for the confirm button (default: "OK")
---- @param cancelButtonText string Optional text for the cancel button (default: "Cancel")
---- @param onConfirm function Callback function to execute if user confirms
---- @param onCancel function|nil Optional callback function to execute if user cancels (default: just close dialog)
-function QMUIUtils.ShowConfirmationDialog(title, message, confirmButtonText, cancelButtonText, onConfirm, onCancel)
-    -- Set default button text if not provided or empty
-    confirmButtonText = (confirmButtonText and confirmButtonText ~= "") and confirmButtonText or "Confirm"
-    cancelButtonText = (cancelButtonText and cancelButtonText ~= "") and cancelButtonText or "Cancel"
-
-    local confirmationWindow = gui.Panel{
-        width = 400,
-        height = 200,
-        halign = "center",
-        valign = "center",
-        bgcolor = "#111111ff",
-        borderWidth = 2,
-        borderColor = Styles.textColor,
-        bgimage = "panels/square.png",
-        flow = "vertical",
-        hpad = 20,
-        vpad = 20,
-        styles = QMUIUtils.GetDialogStyles(),
-
-        children = {
-            -- Header
-            gui.Label{
-                text = title,
-                fontSize = 24,
-                width = "100%",
-                height = 30,
-                classes = {"QMLabel", "QMBase"},
-                textAlignment = "center",
-                halign = "center"
-            },
-
-            -- Confirmation message
-            gui.Label{
-                text = message,
-                width = "100%",
-                height = 80,
-                classes = {"QMLabel", "QMBase"},
-                textAlignment = "center",
-                textWrap = true,
-                halign = "center",
-                valign = "center"
-            },
-
-            -- Button panel
-            gui.Panel{
-                width = "100%",
-                height = 40,
-                flow = "horizontal",
-                halign = "center",
-                valign = "center",
-                children = {
-                    -- Cancel button (first)
-                    gui.Button{
-                        text = cancelButtonText,
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QMButton", "QMBase"},
-                        click = function(element)
-                            gui.CloseModal()
-                            if onCancel then
-                                onCancel()
-                            end
-                        end
-                    },
-                    -- Confirm button (second)
-                    gui.Button{
-                        text = confirmButtonText,
-                        width = 120,
-                        height = 40,
-                        hmargin = 10,
-                        classes = {"QMButton", "QMBase"},
-                        click = function(element)
-                            gui.CloseModal()
-                            if onConfirm then
-                                onConfirm()
-                            end
-                        end
-                    }
-                }
-            }
-        },
-
-        escape = function(element)
-            gui.CloseModal()
-            if onCancel then
-                onCancel()
-            end
-        end
-    }
-
-    gui.ShowModal(confirmationWindow)
-end
-
---- Shows a standardized delete confirmation dialog
---- @param itemType string The type of item being deleted ("quest", "note", "objective")
---- @param itemTitle string The display name/title of the item being deleted
---- @param onConfirm function Callback function to execute if user confirms deletion
---- @param onCancel? function Optional callback function to execute if user cancels (default: just close dialog)
-function QMUIUtils.ShowDeleteConfirmation(itemType, itemTitle, onConfirm, onCancel)
-    local title = "Delete Confirmation"
-    local message = "Are you sure you want to delete " .. itemType .. " \"" .. (itemTitle or "Untitled") .. "\"?"
-
-    QMUIUtils.ShowConfirmationDialog(title, message, "Delete", "Cancel", onConfirm, onCancel)
-end

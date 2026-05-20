@@ -11,99 +11,17 @@ function RichQuest.Create()
     return RichQuest.new()
 end
 
-local DisplayStyles = {
-    {
-        selectors = {"quest-panel"},
-        bgimage = true,
-        bgcolor = "black",
-        borderColor = "#ffffff88",
-        borderWidth = "1",
-        pad = 2,
-        halign = "left",
-    },
-    {
-        selectors = {"quest-header-panel"},
-        width = "100%",
-        height = "auto",
-        flow = "horizontal",
-        bgimage = true,
-        bgcolor = "black",
-        borderColor = "white",
-        border = {x1 = 0, y1 = 1, x2 = 0, y2 = 0},
-    },
-    {
-        selectors = {"quest-body-panel"},
-        width = "100%",
-        height = "auto",
-        pad = 4,
-        halign = "left",
-        valign = "top",
-        flow = "vertical",
-    },
-    {
-        selectors = {"quest-manager-icon"},
-        halign = "left",
-        valign = "center",
-        hmargin = 4,
-        width = 16,
-        height = 16,
-    },
-    {
-        selectors = {"quest-label"},
-        textAlignment = "topLeft",
-        fontSize = 14,
-        minFontSize = 8,
-        hmargin = 0,
-        height = "auto",
-        width = "auto",
-        halign = "left",
-        valign = "top",
-    },
-	{
-		selectors = {"quest-open-icon"},
-		halign = "right",
-		valign = "center",
-        hmargin = 12,
-		width = 16,
-		height = 16,
-		bgimage = "panels/hud/gear.png",
-		bgcolor = "white",
-	},
-    {
-        selectors = {"quest-open-icon", "hover"},
-        brightness = 1.5,
-    },
-	{
-		selectors = {"quest-visible-icon"},
-		halign = "right",
-		valign = "center",
-        hmargin = 8,
-		width = 16,
-		height = 16,
-		bgimage = "ui-icons/eye.png",
-		bgcolor = "white",
-	},
-	{
-		selectors = {"quest-visible-icon", "hover"},
-		brightness = 1.5,
-	},
-	{
-		selectors = {"quest-visible-icon", "inactive"},
-		bgimage = "ui-icons/eye-closed.png",
-	},
-}
-
 function RichQuest:CreateDisplay()
     local resultPanel
 
-    local m_questManager = QMQuestManager:new()
+    local m_questManager = QMQuestManager.CreateNew()
     local m_questId
     local m_quest
 
     local function validateQuest(questId)
         if m_quest and m_quest:GetID() == questId then return m_quest end
         m_quest = nil
-        if m_questManager == nil then m_questManager = QMQuestManager:new() end
+        if m_questManager == nil then m_questManager = QMQuestManager.CreateNew() end
         if m_questManager then
             if QMUIUtils.IsGuid(questId) then
                 m_quest = m_questManager:GetQuest(questId)
@@ -121,14 +39,23 @@ function RichQuest:CreateDisplay()
     end
 
     local qmIcon = gui.Panel{
-        classes = {"quest-manager-icon"},
         bgimage = mod.images.questManager,
         bgcolor = "white",
+        halign = "left",
+        valign = "center",
+        hmargin = 4,
+        width = 16,
+        height = 16,
     }
 
     local titleLabel = gui.Label{
-        classes = {"quest-label"},
+        classes = {"sizeS"},
         width = "84%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        textAlignment = "topLeft",
+        minFontSize = 8,
         refreshTag = function(element)
             local title = "Unknown Quest"
             local priority = "?"
@@ -142,12 +69,17 @@ function RichQuest:CreateDisplay()
         end
     }
 
-    local openButton = gui.Panel{
-        classes = {"quest-open-icon"},
+    local openButton = gui.Button{
+        classes = {"settingsButton"},
+        halign = "right",
+        valign = "center",
+        hmargin = 12,
+        width = 16,
+        height = 16,
         swallowPress = true,
         press = function(element)
             if m_quest then
-                local questMgrWindow = QMQuestManagerWindow:new(m_quest)
+                local questMgrWindow = QMQuestManagerWindow.CreateNew(m_quest)
                 if questMgrWindow then
                     questMgrWindow:Show()
                 end
@@ -155,12 +87,17 @@ function RichQuest:CreateDisplay()
         end,
     }
 
-    local showHide = dmhub.isDM and gui.Panel{
-        classes = {"quest-visible-icon"},
+    local showHide = dmhub.isDM and gui.Button{
+        icon = "ui-icons/eye.png",
+        halign = "right",
+        valign = "center",
+        hmargin = 8,
+        width = 16,
+        height = 16,
         swallowPress = true,
         refreshTag = function(element)
             local visible = m_quest and m_quest:GetVisibleToPlayers() or false
-            element:SetClass("inactive", not visible)
+            element.icon = visible and "ui-icons/eye.png" or "ui-icons/eye-closed.png"
         end,
         press = function(element)
             if m_questManager and m_quest then
@@ -173,77 +110,75 @@ function RichQuest:CreateDisplay()
     } or nil
 
     local headerPanel = gui.Panel{
-        classes = {"quest-header-panel"},
+        width = "100%",
+        height = "auto",
+        flow = "horizontal",
         qmIcon,
         titleLabel,
         showHide,
         openButton,
     }
 
-    local questGiver = gui.Label{
-        classes = {"quest-label"},
-        width = "98%",
-        text = "calculating...",
-        refreshTag = function(element)
-            local giver = "?"
-            local location = "?"
-            if m_quest then
-                giver = m_quest:GetQuestGiver()
-                location = m_quest:GetLocation()
-            end
-            element.text = string.format("<b>Granted By:</b> %s at %s", giver, location)
-        end,
-    }
+    local function makeBodyLabel(refreshTag)
+        return gui.Label{
+            classes = {"sizeS"},
+            width = "98%",
+            height = "auto",
+            halign = "left",
+            valign = "top",
+            textAlignment = "topLeft",
+            minFontSize = 8,
+            text = "calculating...",
+            refreshTag = refreshTag,
+        }
+    end
 
-    local description = gui.Label{
-        classes = {"quest-label"},
-        width = "98%",
-        text = "calculating...",
-        refreshTag = function(element)
-            local description = m_quest and m_quest:GetDescription()
-            element.text = description
-            element:SetClass("collapsed", description == nil or #description == 0)
-        end,
-    }
-
-    local objectives = gui.Label{
-        classes = {"quest-label"},
-        width = "98%",
-        text = "calculating...",
-        refreshTag = function(element)
-            local text = ""
-            local objectives = m_quest and m_quest:GetObjectivesSorted()
-            if objectives and #objectives > 0 then
-                text = string.format("<b>Objective%s:</b>%s", #objectives > 1 and "s" or "", #objectives > 1 and "\n" or "")
-                local i = 0
-                for _, objective in ipairs(objectives) do
-                    i = i + 1
-                    text = string.format("%s%d. %s%s", text, i, formatObjective(objective), #objectives > i and "\n" or "")
-                end
-            end
-            element.text = text
-            element:SetClass("collapsed", #text == 0)
+    local questGiver = makeBodyLabel(function(element)
+        local giver = "?"
+        local location = "?"
+        if m_quest then
+            giver = m_quest:GetQuestGiver()
+            location = m_quest:GetLocation()
         end
-    }
+        element.text = string.format("<b>Granted By:</b> %s at %s", giver, location)
+    end)
 
-    local rewards = gui.Label {
-        classes = {"quest-label"},
-        width = "98%",
-        text = "calculating...",
-        refreshTag = function(element)
-            local text = ""
-            local rewards = m_quest and m_quest:GetRewards()
-            if rewards then
-                text = string.format("<b>Rewards:</b> %s", rewards)
+    local description = makeBodyLabel(function(element)
+        local text = m_quest and m_quest:GetDescription()
+        element.text = text
+        element:SetClass("collapsed", text == nil or #text == 0)
+    end)
+
+    local objectives = makeBodyLabel(function(element)
+        local text = ""
+        local list = m_quest and m_quest:GetObjectivesSorted()
+        if list and #list > 0 then
+            text = string.format("<b>Objective%s:</b>%s", #list > 1 and "s" or "", #list > 1 and "\n" or "")
+            for i, objective in ipairs(list) do
+                text = string.format("%s%d. %s%s", text, i, formatObjective(objective), #list > i and "\n" or "")
             end
-            element.text = text
-            element:SetClass("collapsed", #text == 0)
         end
-    }
+        element.text = text
+        element:SetClass("collapsed", #text == 0)
+    end)
+
+    local rewards = makeBodyLabel(function(element)
+        local text = ""
+        local rewardText = m_quest and m_quest:GetRewards()
+        if rewardText then
+            text = string.format("<b>Rewards:</b> %s", rewardText)
+        end
+        element.text = text
+        element:SetClass("collapsed", #text == 0)
+    end)
 
     local bodyPanel = gui.Panel{
-        classes = {"quest-body-panel"},
+        width = "100%",
         height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+        pad = 4,
         questGiver,
         description,
         objectives,
@@ -251,12 +186,13 @@ function RichQuest:CreateDisplay()
     }
 
     resultPanel = gui.Panel{
-        styles = DisplayStyles,
-        classes = {"quest-panel"},
+        classes = {"bordered"},
+        styles = ThemeEngine.GetStyles(),
         width = "80%",
         height = "auto",
         flow = "vertical",
         halign = "left",
+        pad = 2,
 
         monitorGame = m_questManager:GetDocumentPath(),
         refreshGame = function(element)
@@ -277,6 +213,12 @@ function RichQuest:CreateDisplay()
         headerPanel,
         bodyPanel,
     }
+
+    ThemeEngine.OnThemeChanged(mod, function()
+        if resultPanel ~= nil and resultPanel.valid then
+            resultPanel.styles = ThemeEngine.GetStyles()
+        end
+    end)
 
     return resultPanel
 end

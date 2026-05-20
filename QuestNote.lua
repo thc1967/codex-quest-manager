@@ -6,18 +6,17 @@
 --- @field content string The content of the note
 --- @field createdAt string|osdate ISO 8601 UTC timestamp
 QMQuestNote = RegisterGameType("QMQuestNote")
-QMQuestNote.__index = QMQuestNote
 
 --- Creates a new quest note instance
 --- @param content string The content of the note
 --- @return QMQuestNote instance The new note instance
-function QMQuestNote:new(content)
-    local instance = setmetatable({}, self)
-    instance.id = dmhub.GenerateGuid()
-    instance.content = content or ""
-    instance.authorId = dmhub.userid
-    instance.createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    return instance
+function QMQuestNote.CreateNew(content)
+    return QMQuestNote.new{
+        id = dmhub.GenerateGuid(),
+        content = content or "",
+        authorId = dmhub.userid,
+        createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    }
 end
 
 --- Gets the unique identifier for this note

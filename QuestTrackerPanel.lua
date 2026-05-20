@@ -5,17 +5,13 @@ local mod = dmhub.GetModLoading()
 --- @class QMQuestTrackerPanel
 --- @field questManager QMQuestManager The quest manager instance for data operations
 QMQuestTrackerPanel = RegisterGameType("QMQuestTrackerPanel")
-QMQuestTrackerPanel.__index = QMQuestTrackerPanel
 
 --- Creates a new Quest Tracker Panel instance
 --- @param questManager QMQuestManager The quest manager instance for data operations
 --- @return QMQuestTrackerPanel|nil instance The new panel instance
-function QMQuestTrackerPanel:new(questManager)
+function QMQuestTrackerPanel.CreateNew(questManager)
     if not questManager then return nil end
-
-    local instance = setmetatable({}, self)
-    instance.questManager = questManager
-    return instance
+    return QMQuestTrackerPanel.new{ questManager = questManager }
 end
 
 --- Registers the dockable panel with the Codex UI system
@@ -45,7 +41,6 @@ function QMQuestTrackerPanel:_buildMainPanel()
         width = "96%",
         height = "auto",
         flow = "vertical",
-        styles = questTrackerPanel:_getMainStyles(),
         monitorGame = questTrackerPanel.questManager:GetDocumentPath(),
         refreshGame = function(element)
             questTrackerPanel:_refreshPanelContent(element)
@@ -56,7 +51,7 @@ function QMQuestTrackerPanel:_buildMainPanel()
         openQuest = function(element, questId)
             local quest = questTrackerPanel.questManager:GetQuest(questId)
             if quest then
-                local questManagerWindow = QMQuestManagerWindow:new(quest)
+                local questManagerWindow = QMQuestManagerWindow.CreateNew(quest)
                 if questManagerWindow then
                     questManagerWindow:Show()
                 end
@@ -85,10 +80,11 @@ function QMQuestTrackerPanel:_buildHeaderPanel()
         children = {
             gui.Label {
                 text = "Active Quests (" .. questCount .. ")",
-                classes = {"header-title"},
+                classes = {"bold", "sizeM"},
                 width = "40%"
             },
-            gui.AddButton {
+            gui.Button {
+                classes = {"addButton"},
                 halign = "right",
                 valign = "center",
                 linger = function(element)
@@ -122,7 +118,7 @@ function QMQuestTrackerPanel:_buildContentPanel()
             questChildren[#questChildren + 1] =
                 gui.Label {
                 text = "No quests yet.",
-                classes = {"empty-state"},
+                classes = {"sizeS"},
                 width = "100%",
                 height = "100%",
                 halign = "center",
@@ -174,7 +170,7 @@ function QMQuestTrackerPanel:_buildContentPanel()
                 if categoryQuests and #categoryQuests > 0 then
                     if hasAnyContent then
                         -- Add spacing between sections
-                        questChildren[#questChildren + 1] = gui.Divider { width = "80%" }
+                        -- questChildren[#questChildren + 1] = gui.MCDMDivider { width = "80%" }
                     end
                     questChildren[#questChildren + 1] = self:_buildCategorySection(categoryId, categoryQuests)
                     hasAnyContent = true
@@ -185,7 +181,7 @@ function QMQuestTrackerPanel:_buildContentPanel()
         questChildren[#questChildren + 1] =
             gui.Label {
             text = "Quest Manager not available",
-            classes = {"error-state"},
+            classes = {"danger", "bold", "sizeS"},
             width = "100%",
             height = "100%"
         }
@@ -195,7 +191,6 @@ function QMQuestTrackerPanel:_buildContentPanel()
         width = "100%",
         height = "auto",
         flow = "vertical",
-        styles = self:_getContentStyles(),
         children = questChildren
     }
 end
@@ -222,13 +217,13 @@ function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
 
     -- Build action buttons array conditionally
     local actionButtons = {
-        gui.SettingsButton {
+        gui.Button {
+            classes = {"settingsButton"},
             width = 20,
             height = 20,
             halign = "center",
             valign = "center",
             hmargin = 2,
-            classes = {"quest-edit-button"},
             press = function(element)
                 element:FireEventOnParents("openQuest", quest:GetID())
             end
@@ -237,32 +232,39 @@ function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
 
     -- Add delete button only for DM or quest creator
     if dmhub.isDM or dmhub.userid == quest:GetCreatedBy() then
-        actionButtons[#actionButtons + 1] = gui.DeleteItemButton {
+        actionButtons[#actionButtons + 1] = gui.Button {
+            classes = {"deleteButton"},
+            requireConfirm = true,
             width = 20,
             height = 20,
             halign = "center",
             valign = "center",
             hmargin = 2,
-            classes = {"quest-delete-button"},
             click = function()
-                QMUIUtils.ShowDeleteConfirmation("quest", title, function()
-                    self.questManager:DeleteQuest(quest:GetID())
-                end)
+                self.questManager:DeleteQuest(quest:GetID())
             end
         }
     end
+
+    local STATUS_BG_CLASS = {
+        [QMQuest.STATUS.ACTIVE]    = "bgSuccess",
+        [QMQuest.STATUS.COMPLETED] = "bgInfo",
+        [QMQuest.STATUS.FAILED]    = "bgDanger",
+    }
+    local statusBgClass = STATUS_BG_CLASS[status]
 
     return gui.Panel {
         width = "96%",
         height = 50,
         flow = "horizontal",
-        classes = {"quest-item", "quest-" .. status, "priority-" .. priority},
+        classes = {"hoverable"},
+        tmargin = 8,
         children = {
             -- Status indicator
             gui.Panel {
                 width = 4,
                 height = "100%",
-                classes = {"status-indicator", "status-" .. status}
+                classes = statusBgClass and { statusBgClass } or {},
             },
             -- Quest content
             gui.Panel {
@@ -272,7 +274,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
                 children = {
                     gui.Label {
                         text = title,
-                        classes = {"quest-title"},
+                        classes = {"bold"},
                         width = "100%",
                         height = 20,
                         textAlignment = "left"
@@ -284,7 +286,7 @@ function QMQuestTrackerPanel:_buildQuestItem(quest, untitledDisplayText)
                         children = {
                             gui.Label {
                                 text = string.format("%s; %s Priority", status, priority),
-                                classes = {"quest-status"},
+                                classes = {"sizeXxs"},
                                 width = "100%",
                                 height = 15,
                                 textAlignment = "left"
@@ -316,7 +318,7 @@ function QMQuestTrackerPanel:_buildUntitledQuestsSection(untitledQuests)
     for i, quest in ipairs(untitledQuests) do
         -- Add divider before quest (except first one)
         if i > 1 then
-            questChildren[#questChildren + 1] = gui.Divider { width = "80%" }
+            -- questChildren[#questChildren + 1] = gui.MCDMDivider { width = "80%" }
         end
         -- Quest item with "(New Quest)" display text
         questChildren[#questChildren + 1] = self:_buildQuestItem(quest, "(New Quest)")
@@ -326,7 +328,6 @@ function QMQuestTrackerPanel:_buildUntitledQuestsSection(untitledQuests)
         width = "100%",
         height = "auto",
         flow = "vertical",
-        classes = {"untitled-quests-section"},
         children = questChildren
     }
 end
@@ -342,34 +343,6 @@ function QMQuestTrackerPanel:_getCategoryDisplayName(categoryId)
     return categoryId .. " Quests"
 end
 
--- Triangle icon styles (based on MapsPanel pattern)
-local triangleStyles = {
-    gui.Style{
-        selectors = {"category-triangle"},
-        bgimage = "panels/triangle.png",
-        bgcolor = "white",
-        hmargin = 4,
-        halign = "left",
-        valign = "center",
-        height = 12,
-        width = 12,
-        rotate = 90,
-    },
-    gui.Style{
-        selectors = {"category-triangle", "expanded"},
-        rotate = 0,
-        transitionTime = 0.2,
-    },
-    gui.Style{
-        selectors = {"category-triangle", "hover"},
-        bgcolor = "yellow",
-    },
-    gui.Style{
-        selectors = {"category-triangle", "press"},
-        bgcolor = "gray",
-    },
-}
-
 --- Builds a collapsible header for a quest category
 --- @param categoryId string The category ID from QMQuest.CATEGORY
 --- @param questCount number The number of quests in this category
@@ -380,16 +353,15 @@ function QMQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, conten
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
     local isExpanded = dmhub.GetPref(prefKey) or false
 
-    local triangle = gui.Panel{
-        classes = {"category-triangle", isExpanded and "expanded" or nil},
-        styles = triangleStyles,
+    local triangle = gui.ExpandoArrow{
+        classes = isExpanded and {"expanded"} or nil,
         click = function(element)
-            local isExpanded = not element:HasClass("expanded") -- Toggle current state
-            element:SetClass("expanded", isExpanded)
+            local nowExpanded = not element:HasClass("expanded")
+            element:SetClass("expanded", nowExpanded)
             if contentPanel then
-                contentPanel:SetClass("collapsed", not isExpanded)
+                contentPanel:SetClass("collapseAnim", not nowExpanded)
             end
-            dmhub.SetPref(prefKey, isExpanded)
+            dmhub.SetPref(prefKey, nowExpanded)
         end
     }
 
@@ -397,12 +369,13 @@ function QMQuestTrackerPanel:_buildCategoryHeader(categoryId, questCount, conten
         width = "100%",
         height = 30,
         flow = "horizontal",
-        classes = {"category-header"},
+        classes = {"hoverable"},
         children = {
             triangle,
             gui.Label{
                 text = categoryName .. " (" .. questCount .. ")",
-                classes = {"category-title"},
+                classes = {"bold"},
+                fontSize = 16,
                 width = "auto",
                 height = "100%",
                 valign = "center",
@@ -423,7 +396,7 @@ function QMQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
     for i, quest in ipairs(categoryQuests) do
         -- Add divider before quest (except first one)
         if i > 1 then
-            questChildren[#questChildren + 1] = gui.Divider { width = "80%" }
+            -- questChildren[#questChildren + 1] = gui.MCDMDivider { width = "80%" }
         end
         -- Quest item
         questChildren[#questChildren + 1] = self:_buildQuestItem(quest)
@@ -433,15 +406,15 @@ function QMQuestTrackerPanel:_buildCategoryContent(categoryQuests, categoryId)
     local prefKey = string.format("questcategory:%s:%s", categoryId, dmhub.gameid or "default")
     local isExpanded = dmhub.GetPref(prefKey) or false
 
-    -- Build CSS classes array with conditional collapsed class
-    local classes = {"category-content"}
+    local classes = {}
     if not isExpanded then
-        table.insert(classes, "collapsed")
+        table.insert(classes, "collapseAnim")
     end
 
     return gui.Panel{
-        width = "100%",
+        width = "98%",
         height = "auto",
+        halign = "right",
         flow = "vertical",
         classes = classes,
         children = questChildren
@@ -465,178 +438,9 @@ function QMQuestTrackerPanel:_buildCategorySection(categoryId, categoryQuests)
         width = "100%",
         height = "auto",
         flow = "vertical",
-        classes = {"category-section"},
         children = {
             headerPanel,
             contentPanel
-        }
-    }
-end
-
---- Gets additional styling for content elements
---- @return table styles Array of GUI styles for content
-function QMQuestTrackerPanel:_getContentStyles()
-    return {
-        gui.Style {
-            selectors = {"empty-state"},
-            color = Styles.textColor,
-            fontSize = 14,
-            -- fontStyle = "italic"
-        },
-        gui.Style {
-            selectors = {"error-state"},
-            color = "red",
-            fontSize = 14,
-            bold = true
-        },
-        -- Category section styling
-        gui.Style {
-            selectors = {"category-section"},
-            width = "100%",
-            margin = 2
-        },
-        gui.Style {
-            selectors = {"category-header"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor,
-            height = 30,
-            margin = 1
-        },
-        gui.Style {
-            selectors = {"category-header", "hover"},
-            bgcolor = Styles.textColor,
-            color = Styles.backgroundColor,
-            brightness = 0.9
-        },
-        gui.Style {
-            selectors = {"category-title"},
-            fontSize = 16,
-            bold = true,
-            color = Styles.textColor,
-            textAlignment = "left"
-        },
-        -- Category content styling
-        gui.Style {
-            selectors = {"category-content"},
-            width = "98%",
-            halign = "right",
-            transitionTime = 0.2
-        },
-        gui.Style {
-            selectors = {"category-content", "collapsed"},
-            height = 0,
-            hidden = 1
-        },
-        gui.Style {
-            selectors = {"quest-list-header"},
-            color = Styles.textColor,
-            fontSize = 16,
-            bold = true,
-            textAlignment = "left",
-            -- padding = 5
-        },
-        gui.Style {
-            selectors = {"quest-item"},
-            bgcolor = Styles.backgroundColor,
-            borderWidth = 1,
-            borderColor = Styles.textColor,
-            margin = 2,
-            -- padding = 5
-        },
-        gui.Style {
-            selectors = {"quest-item", "hover"},
-            bgcolor = Styles.textColor,
-            color = Styles.backgroundColor,
-            brightness = 0.9
-        },
-        gui.Style {
-            selectors = {"status-indicator"},
-            bgcolor = Styles.textColor
-        },
-        gui.Style {
-            selectors = {"status-indicator", "status-active"},
-            bgcolor = "green"
-        },
-        gui.Style {
-            selectors = {"status-indicator", "status-completed"},
-            bgcolor = "blue"
-        },
-        gui.Style {
-            selectors = {"status-indicator", "status-failed"},
-            bgcolor = "red"
-        },
-        gui.Style {
-            selectors = {"quest-title"},
-            fontSize = 14,
-            bold = true,
-            color = Styles.textColor
-        },
-        gui.Style {
-            selectors = {"quest-status"},
-            fontSize = 11,
-            color = Styles.textColor
-        },
-        gui.Style {
-            selectors = {"quest-category"},
-            fontSize = 11,
-            color = Styles.textColor,
-            -- fontStyle = "italic"
-        },
-        gui.Style {
-            selectors = {"quest-priority"},
-            fontSize = 11,
-            color = Styles.textColor
-        },
-        gui.Style {
-            selectors = {"quest-actions"},
-            fontSize = 12,
-            color = Styles.textColor,
-            bold = true
-        }
-    }
-end
-
---- Gets the styling configuration for the main panel
---- @return table styles Array of GUI styles for the quest tracker interface
-function QMQuestTrackerPanel:_getMainStyles()
-    return {
-        gui.Style {
-            selectors = {"header-title"},
-            color = Styles.textColor,
-            fontSize = 18,
-            bold = true,
-            valign = "center",
-            halign = "left",
-            textAlignment = "left"
-        },
-        gui.Style {
-            selectors = {"header-button"},
-            color = Styles.textColor,
-            fontSize = 14,
-            textAlignment = "center",
-            valign = "center",
-            halign = "center",
-            bgimage = "panels/square.png",
-            borderWidth = 1,
-            borderColor = Styles.black
-        },
-        gui.Style {
-            selectors = {"header-button", "hover"},
-            bgcolor = Styles.textColor,
-            color = "black",
-            brightness = 0.9
-        },
-        gui.Style {
-            selectors = {"content-placeholder"},
-            color = Styles.textColor,
-            fontSize = 14,
-            valign = "center",
-            halign = "center",
-            textAlignment = "center",
-            bgimage = "panels/square.png",
-            borderWidth = 1,
-            borderColor = Styles.black
         }
     }
 end

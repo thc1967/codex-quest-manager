@@ -9,7 +9,6 @@
 --- @field createdBy string GUID identifier of the user who created this objective
 --- @field createdAt string|osdate The ISO 8601 UTC timestamp
 QMQuestObjective = RegisterGameType("QMQuestObjective")
-QMQuestObjective.__index = QMQuestObjective
 
 --- Valid status values for quest objectives
 QMQuestObjective.STATUS = {
@@ -20,19 +19,20 @@ QMQuestObjective.STATUS = {
     ON_HOLD = "On Hold"
 }
 
+QMQuestObjective.title = ""
+QMQuestObjective.description = ""
+QMQuestObjective.status = QMQuestObjective.STATUS.NOT_STARTED
+
 --- Creates a new quest objective instance
 --- @param sortOrder number The sort order for this note
 --- @return QMQuestObjective instance The new objective instance
-function QMQuestObjective:new(sortOrder)
-    local instance = setmetatable({}, self)
-    instance.id = dmhub.GenerateGuid()
-    instance.order = sortOrder
-    instance.title = ""
-    instance.description = ""
-    instance.status = QMQuestObjective.STATUS.NOT_STARTED
-    instance.createdBy = dmhub.userid
-    instance.createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
-    return instance
+function QMQuestObjective.CreateNew(sortOrder)
+    return QMQuestObjective.new{
+        id = dmhub.GenerateGuid(),
+        order = sortOrder,
+        createdBy = dmhub.userid,
+        createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    }
 end
 
 --- Gets the unique identifier for this objective

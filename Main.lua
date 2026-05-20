@@ -1,5 +1,5 @@
-local questManager = QMQuestManager:new()
-local questPanel = QMQuestTrackerPanel:new(questManager)
+local questManager = QMQuestManager.CreateNew()
+local questPanel = QMQuestTrackerPanel.CreateNew(questManager)
 if questPanel then
     questPanel:Register()
 end
@@ -25,7 +25,7 @@ if dmhub.isDM then
 
         local questId, visible = parseArgs(args)
         if questId and type(visible) == "boolean" then
-            local questManager = QMQuestManager:new()
+            local questManager = QMQuestManager.CreateNew()
             if questManager then
                 local quest
                 if QMUIUtils.IsGuid(questId) then
