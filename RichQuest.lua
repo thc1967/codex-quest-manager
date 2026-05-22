@@ -87,8 +87,9 @@ function RichQuest:CreateDisplay()
         end,
     }
 
-    local showHide = dmhub.isDM and gui.Button{
-        icon = "ui-icons/eye.png",
+    local showHide = dmhub.isDM and gui.Panel{
+        classes = {"image", "hoverable"},
+        bgimage = "ui-icons/eye.png",
         halign = "right",
         valign = "center",
         hmargin = 8,
@@ -97,7 +98,7 @@ function RichQuest:CreateDisplay()
         swallowPress = true,
         refreshTag = function(element)
             local visible = m_quest and m_quest:GetVisibleToPlayers() or false
-            element.icon = visible and "ui-icons/eye.png" or "ui-icons/eye-closed.png"
+            element.bgimage = visible and "ui-icons/eye.png" or "ui-icons/eye-closed.png"
         end,
         press = function(element)
             if m_questManager and m_quest then
