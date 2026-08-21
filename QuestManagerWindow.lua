@@ -817,6 +817,7 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                 text = description,
                 placeholderText = "Enter objective description...",
                 multiline = true,
+                characterLimit = 4096,
                 textAlignment = "topleft",
                 editlag = 0.5,
                 vmargin = 5,
@@ -869,6 +870,7 @@ function QMQuestManagerWindow.ShowAddNoteDialog(quest)
                 textAlignment = "topleft",
                 placeholderText = "Enter your note here...",
                 multiline = true,
+                characterLimit = 4096,
                 vmargin = 5,
                 change = function(element)
                     noteContent = element.text or ""
@@ -962,6 +964,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
         multiline = true,
+        characterLimit = 4096,
         textAlignment = "topleft",
         editlag = 0.5,
         refreshQuest = function(element)
@@ -1000,7 +1003,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
         editlag = 0.5,
         refreshQuest = function(element)
             if element.text ~= quest:GetLocation() then
-                element.Text = quest:GetLocation()
+                element.text = quest:GetLocation()
             end
         end,
         edit = function(element)
