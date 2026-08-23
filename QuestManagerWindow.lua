@@ -19,6 +19,43 @@ local function updateNetworkDoc(f)
     end
 end
 
+--- Point size for each theme size class, matching the label/input ladder in
+--- DefaultStyles.lua
+local SIZE_CLASS_FONT = {
+    sizeXxs = 10,
+    sizeXs = 12,
+    sizeS = 14,
+    sizeM = 16,
+    sizeL = 18,
+    sizeXl = 24,
+    sizeXxl = 28
+}
+
+--- Completes the theme's size-class ladder for dropdowns and checkboxes.
+--- DefaultStyles registers sizeXxs..sizeXxl for label, input, button and
+--- iconButton only, so those two controls otherwise ignore a size class and
+--- strand themselves at a different point size from the rest of a form.
+--- A checkbox carries the class on its root, so its label reads it as parent:.
+--- @return table styles Array of rule tables for ThemeEngine.MergeStyles
+local function BuildControlSizeStyles()
+    local styles = {}
+
+    for sizeClass, fontSize in pairs(SIZE_CLASS_FONT) do
+        styles[#styles + 1] = {
+            selectors = {"dropdown", sizeClass},
+            fontSize = fontSize,
+            priority = 5
+        }
+        styles[#styles + 1] = {
+            selectors = {"checkboxLabel", "parent:" .. sizeClass},
+            fontSize = fontSize,
+            priority = 5
+        }
+    end
+
+    return styles
+end
+
 -- Windowed mode setting
 setting {
     id = "quest:windowed",
@@ -180,13 +217,13 @@ function QMQuestManagerWindow:_createWindow()
     windowRoot = gui.Panel {
         id = "questManagerWindow",
         classes = {"dialog"},
-        width = 1100,
-        height = 800,
+        width = 800,
+        height = 600,
         halign = "center",
         valign = "center",
         opacity = 1.0,
         flow = "vertical",
-        styles = ThemeEngine.GetStyles(),
+        styles = ThemeEngine.MergeStyles(BuildControlSizeStyles()),
         monitorGame = QMQuestManager.CreateNew():GetDocumentPath(),
         refreshGame = function(element)
             element:FireEventTree("refreshQuest")
@@ -204,10 +241,8 @@ function QMQuestManagerWindow:_createWindow()
             },
             -- Copy ID button
             gui.Button {
-                classes = {"copyButton"},
+                classes = {"copyButton", "sizeM"},
                 floating = true,
-                width = 24,
-                height = 24,
                 halign = "right",
                 valign = "top",
                 vmargin = 8,
@@ -231,10 +266,8 @@ function QMQuestManagerWindow:_createWindow()
 
             -- X Close button (top right)
             gui.Button {
-                classes = {"closeButton"},
+                classes = {"closeButton", "sizeL"},
                 floating = true,
-                width = 32,
-                height = 32,
                 halign = "right",
                 valign = "top",
                 click = function(element)
@@ -246,7 +279,7 @@ function QMQuestManagerWindow:_createWindow()
 
     ThemeEngine.OnThemeChanged(mod, function()
         if windowRoot ~= nil and windowRoot.valid then
-            windowRoot.styles = ThemeEngine.GetStyles()
+            windowRoot.styles = ThemeEngine.MergeStyles(BuildControlSizeStyles())
         end
     end)
 
@@ -371,12 +404,11 @@ function QMQuestManagerWindow.CreateObjectivesPanel(quest)
 
     return gui.Panel {
         id = "objectivesPanel",
-        width = "100%-20",
+        width = "96%",
         height = "90%",
         flow = "vertical",
         valign = "top",
         halign = "center",
-        hpad = 20,
         vpad = 20,
         refreshObjectives = function(element)
             -- TODO: We should remove this in favor of a reconcile
@@ -582,10 +614,8 @@ function QMQuestManagerWindow.CreateNoteItem(quest, note)
     -- Add delete button for author or DM
     if dmhub.isDM or note:GetAuthorId() == dmhub.userid then
         headerChildren[#headerChildren + 1] = gui.Button {
-            classes = {"deleteButton"},
+            classes = {"deleteButton", "sizeXs"},
             requireConfirm = true,
-            width = 20,
-            height = 20,
             halign = "right",
             valign = "center",
             click = function()
@@ -738,10 +768,8 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
     local deleteButton = nil
     if dmhub.isDM or objective:GetCreatedBy() == dmhub.userid then
         deleteButton = gui.Button {
-            classes = {"deleteButton"},
+            classes = {"deleteButton", "sizeXs"},
             requireConfirm = true,
-            width = 20,
-            height = 20,
             halign = "right",
             valign = "top",
             hmargin = 5,
@@ -756,10 +784,11 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
 
     local objectivePanel = gui.Panel {
         id = id,
-        width = "100%",
+        width = "96%",
         height = "auto",
         flow = "vertical",
         valign = "top",
+        halign = "left",
         vmargin = 5,
         children = {
             -- Header with drag handle, title, status, and delete button
@@ -774,7 +803,7 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                     dragHandle,
                     -- Title input (in-place editing)
                     gui.Input {
-                        width = "50%",
+                        width = "48%",
                         text = title,
                         placeholderText = "Enter objective title...",
                         editlag = 0.5,
@@ -791,7 +820,7 @@ function QMQuestManagerWindow.CreateObjectiveItem(quest, objective)
                     },
                     -- Status dropdown (in-place editing)
                     gui.Dropdown {
-                        width = "40%",
+                        width = "32%",
                         hmargin = 10,
                         options = statusOptions,
                         idChosen = status,
@@ -932,7 +961,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
             width = width or "96%",
             children = {
                 gui.Label {
-                    classes = {"formStacked"},
+                    classes = {"formStacked", "sizeS"},
                     text = labelText,
                 },
                 control,
@@ -942,7 +971,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
 
     -- Create form field elements
     local titleField = gui.Input {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         text = quest:GetTitle() or "New Quest",
         placeholderText = "Enter quest title...",
         editlag = 0.5,
@@ -959,7 +988,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local descriptionField = gui.Input {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         height = 100,
         text = quest:GetDescription() or "",
         placeholderText = "Enter quest description...",
@@ -980,7 +1009,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local questGiverField = gui.Input {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         text = quest:GetQuestGiver() or "",
         placeholderText = "Who gave this quest?",
         editlag = 0.5,
@@ -997,7 +1026,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local locationField = gui.Input {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         text = quest:GetLocation() or "",
         placeholderText = "Where does this quest take place?",
         editlag = 0.5,
@@ -1014,7 +1043,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local rewardsField = gui.Input {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         text = quest:GetRewards() or "",
         placeholderText = "What rewards does this quest offer?",
         editlag = 0.5,
@@ -1037,7 +1066,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
 
     -- Create dropdown elements
     local categoryDropdown = gui.Dropdown {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         options = categoryOptions,
         idChosen = quest:GetCategory() or QMQuest.CATEGORY.MAIN,
         refreshQuest = function(element)
@@ -1053,7 +1082,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local priorityDropdown = gui.Dropdown {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         options = priorityOptions,
         idChosen = quest:GetPriority() or QMQuest.PRIORITY.MEDIUM,
         refreshQuest = function(element)
@@ -1069,7 +1098,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local statusDropdown = gui.Dropdown {
-        classes = {"formStacked"},
+        classes = {"formStacked", "sizeS"},
         options = statusOptions,
         idChosen = quest:GetStatus() or QMQuest.STATUS.NOT_STARTED,
         refreshQuest = function(element)
@@ -1085,6 +1114,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local rewardsClaimedCheckbox = gui.Check {
+        classes = {"sizeS"},
         text = "Rewards Claimed",
         value = quest:GetRewardsClaimed() or false,
         refreshQuest = function(element)
@@ -1100,6 +1130,7 @@ function QMQuestManagerWindow._buildQuestForm(quest)
     }
 
     local visibleToPlayersCheckbox = gui.Check {
+        classes = {"sizeS"},
         text = "Visible to Players",
         value = quest:GetVisibleToPlayers() or (not dmhub.isDM),
         refreshQuest = function(element)
@@ -1116,11 +1147,10 @@ function QMQuestManagerWindow._buildQuestForm(quest)
 
     return gui.Panel {
         width = "96%",
-        height = "90%",
+        height = "auto",
         flow = "vertical",
         valign = "top",
         halign = "center",
-        tmargin = 12,
         children = {
             stackedRow("Quest Title:", titleField),
             visibleToPlayersCheckbox,
