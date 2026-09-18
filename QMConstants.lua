@@ -42,6 +42,10 @@ QMConstants.iconUnlocked = "phosphor/lock-simple-open.png"
 QMConstants.choiceWidth = "50%"
 QMConstants.shortInputWidth = "78%"
 
+--- The Rewards row shares its line with the Claimed box
+QMConstants.rewardsWidth = "85%"
+QMConstants.claimedWidth = "15%"
+
 QMConstants.statusIcon = {
     [QMQuest.STATUS.NOT_STARTED] = "phosphor/circle-light.png",
     [QMQuest.STATUS.ACTIVE] = "phosphor/play-circle-light.png",

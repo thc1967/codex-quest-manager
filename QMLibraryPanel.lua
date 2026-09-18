@@ -38,7 +38,7 @@ local function Glyph(icon, tone, tooltip)
         valign = "center",
         lmargin = 4,
         bgimage = icon,
-        hover = gui.Tooltip(tooltip),
+        hover = THCWidgets.Tooltip(tooltip),
     }
 end
 
@@ -151,7 +151,7 @@ local function CreateRow(qm, quest, index, selectedId, onSelect)
         halign = "right",
         valign = "center",
         hmargin = 4,
-        hover = gui.Tooltip("More"),
+        hover = THCWidgets.Tooltip("More"),
         click = function(element)
             local entries = {
                 {
@@ -386,7 +386,7 @@ function QMLibraryPanel.Create(qm, onSelect)
                 classes = {"addButton", "sizeS"},
                 halign = "right",
                 valign = "center",
-                hover = gui.Tooltip("Add a quest"),
+                hover = THCWidgets.Tooltip("Add a quest"),
                 click = function(element)
                     local quest = qm:CreateQuest()
                     if quest == nil then

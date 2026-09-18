@@ -42,7 +42,7 @@ local function StatusGlyph(status)
         valign = "center",
         rmargin = 4,
         bgimage = QMConstants.statusIcon[status] or QMConstants.statusIcon[QMQuest.STATUS.NOT_STARTED],
-        hover = gui.Tooltip(status),
+        hover = THCWidgets.Tooltip(status),
     }
 end
 
@@ -185,13 +185,14 @@ function QMEditorPanel.Create(qm)
         change = TextChange(QMQuest.GetRewards, QMQuest.SetRewards),
     }
 
+    --Labelled by its form row, so the box itself carries no text
     local rewardsClaimedCheck = gui.Check{
         classes = {"sizeS"},
-        text = "Rewards Claimed",
+        text = "",
         value = false,
+        height = 30,
         halign = "left",
-        lmargin = 12,
-        bmargin = 8,
+        valign = "center",
         change = function(element)
             local quest = Live()
             if quest == nil or quest:GetRewardsClaimed() == element.value then
@@ -233,9 +234,12 @@ function QMEditorPanel.Create(qm)
             QMUIUtils.FormRow("Location", "50%", locationInput, 0),
         },
 
-        QMUIUtils.FormRow("Rewards", QMConstants.formRowWidth, rewardsInput),
-        rewardsClaimedCheck,
         QMUIUtils.FormRow("Description", QMConstants.formRowWidth, descriptionInput),
+
+        QMUIUtils.FormColumns{
+            QMUIUtils.FormRow("Rewards", QMConstants.rewardsWidth, rewardsInput, 0),
+            QMUIUtils.FormRow("Claimed", QMConstants.claimedWidth, rewardsClaimedCheck, 0),
+        },
     }
 
     --- The text-only form for a viewer who may not edit; rebuilt per quest
@@ -262,7 +266,7 @@ function QMEditorPanel.Create(qm)
         halign = "left",
         valign = "center",
         lmargin = 6,
-        hover = gui.Tooltip("Add an objective"),
+        hover = THCWidgets.Tooltip("Add an objective"),
         click = function()
             Update(function(live)
                 live:AddObjective()
@@ -367,7 +371,7 @@ function QMEditorPanel.Create(qm)
                             ReorderObjective(objectiveId, target.data.objectiveId)
                         end
                     end,
-                    hover = gui.Tooltip("Drag to reorder"),
+                    hover = THCWidgets.Tooltip("Drag to reorder"),
                 },
 
                 StatusGlyph(status),
@@ -425,7 +429,7 @@ function QMEditorPanel.Create(qm)
                     halign = "right",
                     valign = "center",
                     hmargin = 2,
-                    hover = gui.Tooltip("Remove this objective"),
+                    hover = THCWidgets.Tooltip("Remove this objective"),
                     click = function()
                         Update(function(live)
                             live:RemoveObjective(objectiveId)
@@ -577,7 +581,7 @@ function QMEditorPanel.Create(qm)
                 requireConfirm = true,
                 halign = "right",
                 valign = "center",
-                hover = gui.Tooltip("Remove this note"),
+                hover = THCWidgets.Tooltip("Remove this note"),
                 click = function()
                     Update(function(live)
                         live:RemoveNote(noteId)
@@ -704,9 +708,12 @@ function QMEditorPanel.Create(qm)
                 ReadField("Location", "50%", quest:GetLocation(), 0),
             },
 
-            ReadField("Rewards", QMConstants.formRowWidth, cond(quest:GetRewardsClaimed(),
-                (quest:GetRewards() or "") .. " (claimed)", quest:GetRewards())),
             ReadField("Description", QMConstants.formRowWidth, quest:GetDescription()),
+
+            QMUIUtils.FormColumns{
+                ReadField("Rewards", QMConstants.rewardsWidth, quest:GetRewards(), 0),
+                ReadField("Claimed", QMConstants.claimedWidth, cond(quest:GetRewardsClaimed(), "Yes", "No"), 0),
+            },
         }
     end
 

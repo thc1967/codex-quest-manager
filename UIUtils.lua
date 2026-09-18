@@ -208,7 +208,7 @@ function QMUIUtils.GlyphToggle(args)
         valign = "center",
         hmargin = args.hmargin or 4,
         bgimage = cond(on, args.iconOn, args.iconOff),
-        hover = gui.Tooltip(cond(on, args.tooltipOn, args.tooltipOff)),
+        hover = THCWidgets.Tooltip(cond(on, args.tooltipOn, args.tooltipOff)),
         press = press,
     }
 end
