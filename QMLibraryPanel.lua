@@ -405,14 +405,17 @@ function QMLibraryPanel.Create(qm, onSelect)
         flow = "vertical",
         valign = "top",
 
+        --Watches the document itself, so it stands alone in a dock as well as
+        --beside the editor in the window.
+        monitorGame = qm:GetDocumentPath(),
+        refreshGame = function(element)
+            element:FireEvent("rebuild")
+        end,
+
         --- Select a quest and tell the editor about it
         select = function(element, questId)
             m_selected = questId
             onSelect(questId)
-            element:FireEvent("rebuild")
-        end,
-
-        questsChanged = function(element)
             element:FireEvent("rebuild")
         end,
 

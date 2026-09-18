@@ -153,3 +153,24 @@ LaunchablePanel.Register{
     valign = "center",
     content = QMDialog.Create,
 }
+
+--- The dockable tracker: the window's own library, standing alone. Clicking a
+--- row raises the window on that quest, and its add button does the same for
+--- a new one. The dock root already carries the theme cascade.
+--- @return table panel
+function QMDialog.CreateTracker()
+    local qm = QMQuestManager.CreateNew()
+    return QMLibraryPanel.Create(qm, function(questId)
+        if questId ~= nil then
+            QMDialog.Open(questId)
+        end
+    end)
+end
+
+DockablePanel.Register{
+    name = QMConstants.trackerName,
+    icon = QMConstants.icon,
+    minHeight = QMConstants.trackerMinHeight,
+    maxHeight = QMConstants.trackerMaxHeight,
+    content = QMDialog.CreateTracker,
+}

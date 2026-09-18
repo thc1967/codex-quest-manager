@@ -6,6 +6,12 @@ QMConstants = RegisterGameType("QMConstants")
 
 -- Window
 QMConstants.panelName = "Quest Manager"
+
+--- The dockable list. A different name from the window: the two registries
+--- are searched together by name in places, and one name must mean one thing.
+QMConstants.trackerName = "Quest Tracker"
+QMConstants.trackerMinHeight = 120
+QMConstants.trackerMaxHeight = 800
 QMConstants.windowWidth = 1240
 QMConstants.windowHeight = 700
 QMConstants.listWidth = 360
