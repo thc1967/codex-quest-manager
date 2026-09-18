@@ -41,7 +41,7 @@ function QMDialog.Open(questId)
     end)
 end
 
---- The line under the title: where the selected quest stands
+--- The line under the title: which quest is selected and where it stands
 --- @param qm QMQuestManager
 --- @param questId string|nil
 --- @return string
@@ -53,7 +53,14 @@ local function Subtitle(qm, questId)
     if quest == nil then
         return ""
     end
+
+    local title = trim(quest:GetTitle() or "")
+    if title == "" then
+        title = "(New Quest)"
+    end
+
     return table.concat({
+        title,
         quest:GetCategory() or "",
         quest:GetStatus() or "",
         (quest:GetPriority() or "") .. " priority",

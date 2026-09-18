@@ -729,9 +729,11 @@ function QMEditorPanel.Create(qm)
         }
     end
 
+    --What the list column leaves; "100%" here would be the whole working
+    --width and push the pane off the window's right edge.
     local resultPanel
     resultPanel = gui.Panel{
-        width = "100%",
+        width = "100% available",
         height = "100%",
         flow = "vertical",
         halign = "left",
