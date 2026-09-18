@@ -228,10 +228,11 @@ local function CreateRow(qm, onSelect)
             end
             titleLabel:SetClass("fgMuted", untitled or QMConstants.resolvedStatuses[status] == true)
 
-            --Editors get the eye and the lock. A player who cannot edit sees
-            --neither: every quest they can see is visible, and locked to them.
-            eye:SetClass("collapsed", not bound.canEdit)
-            lock:SetClass("collapsed", not bound.canEdit)
+            --Owners get the eye and the lock: who may see and who may edit are
+            --theirs to decide. An unlocked quest's other editors get neither.
+            local owner = quest:IsUserOwner()
+            eye:SetClass("collapsed", not owner)
+            lock:SetClass("collapsed", not owner)
             eye:FireEvent("setState", quest:GetVisibleToPlayers())
             lock:FireEvent("setState", quest:GetPlayersMayEdit())
         end,
