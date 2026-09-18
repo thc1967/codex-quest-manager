@@ -2,7 +2,8 @@ local mod = dmhub.GetModLoading()
 
 --- The right pane of the Quest Manager window: the selected quest's form, its
 --- objectives and its notes. Whoever may edit the quest gets controls; anyone
---- else gets the same information as text, and can still add a note.
+--- else gets the same information as text, and can still add a note. Rows are
+--- built once and rebound, never rebuilt.
 --- @class QMEditorPanel
 QMEditorPanel = RegisterGameType("QMEditorPanel")
 
@@ -31,29 +32,47 @@ local function DisplayTimestamp(timestamp)
     return (timestamp:gsub("T", " "):gsub("Z", ""):gsub("%-", "/"))
 end
 
---- @param status string One of QMQuestObjective.STATUS values
---- @return table panel The tinted status glyph
-local function StatusGlyph(status)
+--- An objective's status glyph with a placeholder icon; the bind dresses it
+--- @return table panel
+local function StatusGlyph()
     return gui.Panel{
-        classes = { QMConstants.statusTone[status] or "bgFgMuted" },
         width = QMConstants.objectiveIconSize,
         height = QMConstants.objectiveIconSize,
         halign = "left",
         valign = "center",
         rmargin = 4,
-        bgimage = QMConstants.statusIcon[status] or QMConstants.statusIcon[QMQuest.STATUS.NOT_STARTED],
-        hover = THCWidgets.Tooltip(status),
+        bgimage = QMConstants.statusIcon[QMQuest.STATUS.NOT_STARTED],
     }
 end
 
---- A label-over-text pair for the read-only form
+--- Dresses an objective's status glyph
+--- @param glyph table
+--- @param state table The glyph's own memory between binds
+--- @param status string One of QMQuestObjective.STATUS values
+local function BindStatusGlyph(glyph, state, status)
+    QMUIUtils.BindGlyph(glyph, state,
+        QMConstants.statusIcon[status] or QMConstants.statusIcon[QMQuest.STATUS.NOT_STARTED],
+        QMConstants.statusTone[status] or "bgFgMuted", status)
+end
+
+--- A label-over-text pair for the read-only form, refilled through the value label
 --- @param labelText string
 --- @param width string
---- @param value string
 --- @param lmargin number|nil Overrides the theme's row margin; 0 for a column inside a group
---- @return table panel
-local function ReadField(labelText, width, value, lmargin)
-    return gui.Panel{
+--- @return table row The row panel
+--- @return table value The label the bind writes into
+local function ReadField(labelText, width, lmargin)
+    local value = gui.Label{
+        classes = {"sizeS", "noBold"},
+        width = "98%",
+        height = "auto",
+        halign = "left",
+        textAlignment = "topLeft",
+        textWrap = true,
+        text = "",
+    }
+
+    local row = gui.Panel{
         classes = {"formStackedRow"},
         width = width,
         lmargin = lmargin,
@@ -62,16 +81,25 @@ local function ReadField(labelText, width, value, lmargin)
                 classes = {"formStacked", "sizeS"},
                 text = labelText,
             },
-            gui.Label{
-                classes = {"sizeS", "noBold"},
-                width = "98%",
-                height = "auto",
-                halign = "left",
-                textAlignment = "topLeft",
-                textWrap = true,
-                text = value or "",
-            },
+            value,
         },
+    }
+
+    return row, value
+end
+
+--- @param text string
+--- @return table panel A muted "nothing here" line
+local function EmptyLine(text)
+    return gui.Label{
+        classes = {"sizeXs", "noBold", "fgMuted"},
+        width = "100%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        vmargin = 8,
+        textAlignment = "left",
+        text = text,
     }
 end
 
@@ -242,42 +270,33 @@ function QMEditorPanel.Create(qm)
         },
     }
 
-    --- The text-only form for a viewer who may not edit; rebuilt per quest
+    -- The text-only form for a viewer who may not edit, built once and refilled
+
+    local readTitleRow, readTitle = ReadField("Title", QMConstants.formRowWidth)
+    local readCategoryRow, readCategory = ReadField("Category", "33%", 0)
+    local readPriorityRow, readPriority = ReadField("Priority", "33%", 0)
+    local readStatusRow, readStatus = ReadField("Status", "34%", 0)
+    local readGiverRow, readGiver = ReadField("Quest Giver", "50%", 0)
+    local readLocationRow, readLocation = ReadField("Location", "50%", 0)
+    local readDescriptionRow, readDescription = ReadField("Description", QMConstants.formRowWidth)
+    local readRewardsRow, readRewards = ReadField("Rewards", QMConstants.rewardsWidth, 0)
+    local readClaimedRow, readClaimed = ReadField("Claimed", QMConstants.claimedWidth, 0)
+
     local readPanel = gui.Panel{
         width = "100%",
         height = "auto",
         flow = "vertical",
         halign = "left",
         valign = "top",
+
+        readTitleRow,
+        QMUIUtils.FormColumns{ readCategoryRow, readPriorityRow, readStatusRow },
+        QMUIUtils.FormColumns{ readGiverRow, readLocationRow },
+        readDescriptionRow,
+        QMUIUtils.FormColumns{ readRewardsRow, readClaimedRow },
     }
 
     -- Objectives
-
-    local objectivesBody = gui.Panel{
-        width = QMConstants.sectionWidth,
-        height = "auto",
-        flow = "vertical",
-        halign = "left",
-        valign = "top",
-    }
-
-    local addObjectiveButton = gui.Button{
-        classes = {"addButton", "sizeXs"},
-        halign = "left",
-        valign = "center",
-        lmargin = 6,
-        hover = THCWidgets.Tooltip("Add an objective"),
-        click = function()
-            Update(function(live)
-                live:AddObjective()
-            end)
-        end,
-    }
-
-    local objectivesHeader = QMUIUtils.SectionHeader{
-        text = "Objectives",
-        trailing = addObjectiveButton,
-    }
 
     --- Moves the dragged objective in front of the target and renumbers the rest
     --- @param draggedId string
@@ -320,21 +339,138 @@ function QMEditorPanel.Create(qm)
         end)
     end
 
-    --- @param objective QMQuestObjective
-    --- @return table panel An editable objective row
-    local function EditObjectiveRow(objective)
-        local objectiveId = objective:GetID()
-        local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
+    --- An editable objective row. Built once and handed an objective with
+    --- `setObjective`; handed nil, it collapses. Text is refilled only when the
+    --- stored value moved, so typing in progress survives another client's change.
+    --- @return table panel
+    local function CreateEditObjectiveRow()
+        --- @type {objectiveId: string|nil, title: string|nil, description: string|nil, status: string|nil}
+        local bound = {}
+        local glyphState = {}
 
         --- @param fn fun(objective: QMQuestObjective)
         local function UpdateObjective(fn)
+            if bound.objectiveId == nil then
+                return
+            end
             Update(function(live)
-                local target = live:GetObjective(objectiveId)
+                local target = live:GetObjective(bound.objectiveId)
                 if target ~= nil then
                     fn(target)
                 end
             end)
         end
+
+        local handle = gui.Panel{
+            classes = {HANDLE_CLASS},
+            width = QMConstants.objectiveDragHandleSize,
+            height = QMConstants.objectiveDragHandleSize,
+            halign = "left",
+            valign = "center",
+            rmargin = 4,
+            bgimage = mod.images.qmHandle,
+            bgcolor = "white",
+            draggable = true,
+            dragTarget = true,
+            data = { objectiveId = nil },
+            canDragOnto = function(element, target)
+                return target ~= nil and target:HasClass(HANDLE_CLASS)
+            end,
+            drag = function(element, target)
+                if target ~= nil and bound.objectiveId ~= nil then
+                    ReorderObjective(bound.objectiveId, target.data.objectiveId)
+                end
+            end,
+            hover = THCWidgets.Tooltip("Drag to reorder"),
+        }
+
+        local glyph = StatusGlyph()
+
+        local objectiveTitle = gui.Input{
+            classes = {"formStacked", "sizeXs"},
+            width = "100% available",
+            height = 24,
+            halign = "left",
+            valign = "center",
+            placeholderText = "Objective title",
+            text = "",
+            change = function(element)
+                if element.text == bound.title then
+                    return
+                end
+                UpdateObjective(function(target)
+                    target:SetTitle(element.text)
+                end)
+            end,
+        }
+
+        local objectiveStatus = gui.Dropdown{
+            classes = {"formStacked", "sizeXs"},
+            width = QMConstants.objectiveStatusWidth,
+            height = 24,
+            halign = "left",
+            valign = "center",
+            hmargin = 4,
+            options = DropdownOptions(QMConstants.statusOrder),
+            idChosen = QMQuest.STATUS.NOT_STARTED,
+            change = function(element)
+                if element.idChosen == bound.status then
+                    return
+                end
+                UpdateObjective(function(target)
+                    target:SetStatus(element.idChosen)
+                end)
+            end,
+        }
+
+        local eye = QMUIUtils.EyeToggle{
+            shown = false,
+            size = QMConstants.rowIconSize,
+            change = function(shown)
+                UpdateObjective(function(target)
+                    target:SetVisibleToPlayers(shown)
+                end)
+            end,
+        }
+
+        local trash = gui.Button{
+            classes = {"deleteButton", "sizeXs"},
+            requireConfirm = true,
+            halign = "right",
+            valign = "center",
+            hmargin = 2,
+            hover = THCWidgets.Tooltip("Remove this objective"),
+            click = function()
+                local objectiveId = bound.objectiveId
+                if objectiveId == nil then
+                    return
+                end
+                Update(function(live)
+                    live:RemoveObjective(objectiveId)
+                end)
+            end,
+        }
+
+        local objectiveDescription = gui.Input{
+            classes = {"formStacked", "sizeXs"},
+            width = string.format("100%%-%d", OBJECTIVE_INDENT),
+            height = QMConstants.multilineHeight,
+            halign = "right",
+            tmargin = 4,
+            multiline = true,
+            textAlignment = "topLeft",
+            characterLimit = QMConstants.characterLimit,
+            placeholderText = "What needs doing.",
+            text = "",
+            change = function(element)
+                if element.text == bound.description then
+                    return
+                end
+                UpdateObjective(function(target)
+                    target:SetDescription(element.text)
+                end)
+            end,
+        }
 
         return gui.Panel{
             width = "100%",
@@ -343,6 +479,42 @@ function QMEditorPanel.Create(qm)
             halign = "left",
             valign = "top",
             vmargin = 4,
+
+            --- @param objective QMQuestObjective|nil
+            setObjective = function(element, objective)
+                element:SetClass("collapsed", objective == nil)
+                if objective == nil then
+                    return
+                end
+
+                bound.objectiveId = objective:GetID()
+                handle.data.objectiveId = bound.objectiveId
+
+                local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
+                bound.status = status
+                BindStatusGlyph(glyph, glyphState, status)
+                if objectiveStatus.idChosen ~= status then
+                    objectiveStatus.idChosen = status
+                end
+
+                local title = objective:GetTitle() or ""
+                if bound.title ~= title then
+                    bound.title = title
+                    if objectiveTitle.text ~= title then
+                        objectiveTitle.text = title
+                    end
+                end
+
+                local description = objective:GetDescription() or ""
+                if bound.description ~= description then
+                    bound.description = description
+                    if objectiveDescription.text ~= description then
+                        objectiveDescription.text = description
+                    end
+                end
+
+                eye:FireEvent("setState", objective:GetVisibleToPlayers())
+            end,
 
             gui.Panel{
                 width = "100%",
@@ -351,121 +523,42 @@ function QMEditorPanel.Create(qm)
                 halign = "left",
                 valign = "top",
 
-                gui.Panel{
-                    classes = {HANDLE_CLASS},
-                    width = QMConstants.objectiveDragHandleSize,
-                    height = QMConstants.objectiveDragHandleSize,
-                    halign = "left",
-                    valign = "center",
-                    rmargin = 4,
-                    bgimage = mod.images.qmHandle,
-                    bgcolor = "white",
-                    draggable = true,
-                    dragTarget = true,
-                    data = { objectiveId = objectiveId },
-                    canDragOnto = function(element, target)
-                        return target ~= nil and target:HasClass(HANDLE_CLASS)
-                    end,
-                    drag = function(element, target)
-                        if target ~= nil then
-                            ReorderObjective(objectiveId, target.data.objectiveId)
-                        end
-                    end,
-                    hover = THCWidgets.Tooltip("Drag to reorder"),
-                },
-
-                StatusGlyph(status),
-
-                gui.Input{
-                    classes = {"formStacked", "sizeXs"},
-                    width = "100% available",
-                    height = 24,
-                    halign = "left",
-                    valign = "center",
-                    placeholderText = "Objective title",
-                    text = objective:GetTitle() or "",
-                    change = function(element)
-                        if element.text == objective:GetTitle() then
-                            return
-                        end
-                        UpdateObjective(function(target)
-                            target:SetTitle(element.text)
-                        end)
-                    end,
-                },
-
-                gui.Dropdown{
-                    classes = {"formStacked", "sizeXs"},
-                    width = QMConstants.objectiveStatusWidth,
-                    height = 24,
-                    halign = "left",
-                    valign = "center",
-                    hmargin = 4,
-                    options = DropdownOptions(QMConstants.statusOrder),
-                    idChosen = status,
-                    change = function(element)
-                        if element.idChosen == objective:GetStatus() then
-                            return
-                        end
-                        UpdateObjective(function(target)
-                            target:SetStatus(element.idChosen)
-                        end)
-                    end,
-                },
-
-                QMUIUtils.EyeToggle{
-                    shown = objective:GetVisibleToPlayers(),
-                    size = QMConstants.rowIconSize,
-                    change = function(shown)
-                        UpdateObjective(function(target)
-                            target:SetVisibleToPlayers(shown)
-                        end)
-                    end,
-                },
-
-                gui.Button{
-                    classes = {"deleteButton", "sizeXs"},
-                    requireConfirm = true,
-                    halign = "right",
-                    valign = "center",
-                    hmargin = 2,
-                    hover = THCWidgets.Tooltip("Remove this objective"),
-                    click = function()
-                        Update(function(live)
-                            live:RemoveObjective(objectiveId)
-                        end)
-                    end,
-                },
+                handle,
+                glyph,
+                objectiveTitle,
+                objectiveStatus,
+                eye,
+                trash,
             },
 
-            gui.Input{
-                classes = {"formStacked", "sizeXs"},
-                width = string.format("100%%-%d", OBJECTIVE_INDENT),
-                height = QMConstants.multilineHeight,
-                halign = "right",
-                tmargin = 4,
-                multiline = true,
-                textAlignment = "topLeft",
-                characterLimit = QMConstants.characterLimit,
-                placeholderText = "What needs doing.",
-                text = objective:GetDescription() or "",
-                change = function(element)
-                    if element.text == objective:GetDescription() then
-                        return
-                    end
-                    UpdateObjective(function(target)
-                        target:SetDescription(element.text)
-                    end)
-                end,
-            },
+            objectiveDescription,
         }
     end
 
-    --- @param objective QMQuestObjective
-    --- @return table panel A text-only objective row
-    local function ReadObjectiveRow(objective)
-        local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
-        local description = objective:GetDescription() or ""
+    --- A text-only objective row, bound the same way
+    --- @return table panel
+    local function CreateReadObjectiveRow()
+        local glyphState = {}
+        local glyph = StatusGlyph()
+
+        local titleLabel = gui.Label{
+            classes = {"sizeXs", "noBold"},
+            width = "100% available",
+            height = "auto",
+            halign = "left",
+            valign = "center",
+            text = "",
+        }
+
+        local descriptionLabel = gui.Label{
+            classes = {"sizeXs", "noBold", "fgMuted"},
+            width = string.format("100%%-%d", QMConstants.objectiveIconSize + 4),
+            height = "auto",
+            halign = "right",
+            textAlignment = "topLeft",
+            textWrap = true,
+            text = "",
+        }
 
         return gui.Panel{
             width = "100%",
@@ -475,6 +568,23 @@ function QMEditorPanel.Create(qm)
             valign = "top",
             vmargin = 4,
 
+            --- @param objective QMQuestObjective|nil
+            setObjective = function(element, objective)
+                element:SetClass("collapsed", objective == nil)
+                if objective == nil then
+                    return
+                end
+
+                BindStatusGlyph(glyph, glyphState,
+                    objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED)
+
+                titleLabel.text = objective:GetTitle() or ""
+
+                local description = objective:GetDescription() or ""
+                descriptionLabel.text = description
+                descriptionLabel:SetClass("collapsed", description == "")
+            end,
+
             gui.Panel{
                 width = "100%",
                 height = "auto",
@@ -482,29 +592,49 @@ function QMEditorPanel.Create(qm)
                 halign = "left",
                 valign = "top",
 
-                StatusGlyph(status),
-
-                gui.Label{
-                    classes = {"sizeXs", "noBold"},
-                    width = "100% available",
-                    height = "auto",
-                    halign = "left",
-                    valign = "center",
-                    text = objective:GetTitle() or "",
-                },
+                glyph,
+                titleLabel,
             },
 
-            gui.Label{
-                classes = {"sizeXs", "noBold", "fgMuted", cond(description == "", "collapsed")},
-                width = string.format("100%%-%d", QMConstants.objectiveIconSize + 4),
-                height = "auto",
-                halign = "right",
-                textAlignment = "topLeft",
-                textWrap = true,
-                text = description,
-            },
+            descriptionLabel,
         }
     end
+
+    local editObjectives = gui.Panel{
+        width = QMConstants.sectionWidth,
+        height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+    }
+
+    local readObjectives = gui.Panel{
+        width = QMConstants.sectionWidth,
+        height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+    }
+
+    local noObjectives = EmptyLine("None yet.")
+
+    local addObjectiveButton = gui.Button{
+        classes = {"addButton", "sizeXs"},
+        halign = "left",
+        valign = "center",
+        lmargin = 6,
+        hover = THCWidgets.Tooltip("Add an objective"),
+        click = function()
+            Update(function(live)
+                live:AddObjective()
+            end)
+        end,
+    }
+
+    local objectivesHeader = QMUIUtils.SectionHeader{
+        text = "Objectives",
+        trailing = addObjectiveButton,
+    }
 
     -- Notes
 
@@ -548,47 +678,47 @@ function QMEditorPanel.Create(qm)
         },
     }
 
-    local notesBody = gui.Panel{
-        width = QMConstants.sectionWidth,
-        height = "auto",
-        flow = "vertical",
-        halign = "left",
-        valign = "top",
-    }
+    --- One note with its byline. Built once and handed a note with `setNote`.
+    --- @return table panel
+    local function CreateNoteRow()
+        --- @type {noteId: string|nil, byline: string|nil, content: string|nil}
+        local bound = {}
 
-    --- @param note QMQuestNote
-    --- @return table panel One note with its byline
-    local function NoteRow(note)
-        local noteId = note:GetID()
-        local authorId = note:GetAuthorId() or ""
-
-        local headerChildren = {
-            gui.Label{
-                classes = {"sizeXxs", "noBold", "fgMuted"},
-                width = "100% available",
-                height = "auto",
-                halign = "left",
-                valign = "center",
-                text = string.format("By %s at %s",
-                    QMUIUtils.GetPlayerDisplayName(authorId),
-                    DisplayTimestamp(note:GetCreatedAt())),
-            },
+        local bylineLabel = gui.Label{
+            classes = {"sizeXxs", "noBold", "fgMuted"},
+            width = "100% available",
+            height = "auto",
+            halign = "left",
+            valign = "center",
+            text = "",
         }
 
-        if dmhub.isDM or authorId == dmhub.userid then
-            headerChildren[#headerChildren + 1] = gui.Button{
-                classes = {"deleteButton", "sizeXs"},
-                requireConfirm = true,
-                halign = "right",
-                valign = "center",
-                hover = THCWidgets.Tooltip("Remove this note"),
-                click = function()
-                    Update(function(live)
-                        live:RemoveNote(noteId)
-                    end)
-                end,
-            }
-        end
+        local deleteButton = gui.Button{
+            classes = {"deleteButton", "sizeXs"},
+            requireConfirm = true,
+            halign = "right",
+            valign = "center",
+            hover = THCWidgets.Tooltip("Remove this note"),
+            click = function()
+                local noteId = bound.noteId
+                if noteId == nil then
+                    return
+                end
+                Update(function(live)
+                    live:RemoveNote(noteId)
+                end)
+            end,
+        }
+
+        local contentLabel = gui.Label{
+            classes = {"sizeXs", "noBold"},
+            width = "100%",
+            height = "auto",
+            halign = "left",
+            textAlignment = "topLeft",
+            textWrap = true,
+            text = "",
+        }
 
         return gui.Panel{
             width = "100%",
@@ -598,41 +728,57 @@ function QMEditorPanel.Create(qm)
             valign = "top",
             vmargin = 4,
 
+            --- @param note QMQuestNote|nil
+            setNote = function(element, note)
+                element:SetClass("collapsed", note == nil)
+                if note == nil then
+                    return
+                end
+
+                bound.noteId = note:GetID()
+                local authorId = note:GetAuthorId() or ""
+
+                local byline = string.format("By %s at %s",
+                    QMUIUtils.GetPlayerDisplayName(authorId),
+                    DisplayTimestamp(note:GetCreatedAt()))
+                if bound.byline ~= byline then
+                    bound.byline = byline
+                    bylineLabel.text = byline
+                end
+
+                deleteButton:SetClass("collapsed", not (dmhub.isDM or authorId == dmhub.userid))
+
+                local content = note:GetContent() or ""
+                if bound.content ~= content then
+                    bound.content = content
+                    contentLabel.text = content
+                end
+            end,
+
             gui.Panel{
                 width = "100%",
                 height = QMConstants.noteHeaderHeight,
                 flow = "horizontal",
                 halign = "left",
                 valign = "top",
-                children = headerChildren,
+
+                bylineLabel,
+                deleteButton,
             },
 
-            gui.Label{
-                classes = {"sizeXs", "noBold"},
-                width = "100%",
-                height = "auto",
-                halign = "left",
-                textAlignment = "topLeft",
-                textWrap = true,
-                text = note:GetContent() or "",
-            },
+            contentLabel,
         }
     end
 
-    --- @param text string
-    --- @return table panel A muted "nothing here" line
-    local function EmptyLine(text)
-        return gui.Label{
-            classes = {"sizeXs", "noBold", "fgMuted"},
-            width = "100%",
-            height = "auto",
-            halign = "left",
-            valign = "top",
-            vmargin = 8,
-            textAlignment = "left",
-            text = text,
-        }
-    end
+    local notesBody = gui.Panel{
+        width = QMConstants.sectionWidth,
+        height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+    }
+
+    local noNotes = EmptyLine("No notes yet.")
 
     local contentPanel = gui.Panel{
         width = "100%",
@@ -644,21 +790,16 @@ function QMEditorPanel.Create(qm)
         formPanel,
         readPanel,
         objectivesHeader,
-        objectivesBody,
+        editObjectives,
+        readObjectives,
+        noObjectives,
         QMUIUtils.SectionHeader{ text = "Notes" },
         noteComposer,
         notesBody,
+        noNotes,
     }
 
-    local emptyLabel = gui.Label{
-        classes = {"sizeS", "fgMuted"},
-        width = "100%",
-        height = "auto",
-        halign = "center",
-        valign = "center",
-        textAlignment = "center",
-        text = "Select a quest on the left, or add one.",
-    }
+    local emptyNotice = THCWidgets.Notice("Select a quest on the left, or add one.")
 
     --- Refills a text control only when its value moved, so typing in progress survives
     --- @param control table
@@ -694,27 +835,15 @@ function QMEditorPanel.Create(qm)
 
     --- @param quest QMQuest
     local function FillReadForm(quest)
-        readPanel.children = {
-            ReadField("Title", QMConstants.formRowWidth, quest:GetTitle()),
-
-            QMUIUtils.FormColumns{
-                ReadField("Category", "33%", quest:GetCategory(), 0),
-                ReadField("Priority", "33%", quest:GetPriority(), 0),
-                ReadField("Status", "34%", quest:GetStatus(), 0),
-            },
-
-            QMUIUtils.FormColumns{
-                ReadField("Quest Giver", "50%", quest:GetQuestGiver(), 0),
-                ReadField("Location", "50%", quest:GetLocation(), 0),
-            },
-
-            ReadField("Description", QMConstants.formRowWidth, quest:GetDescription()),
-
-            QMUIUtils.FormColumns{
-                ReadField("Rewards", QMConstants.rewardsWidth, quest:GetRewards(), 0),
-                ReadField("Claimed", QMConstants.claimedWidth, cond(quest:GetRewardsClaimed(), "Yes", "No"), 0),
-            },
-        }
+        Refill(readTitle, quest:GetTitle() or "")
+        Refill(readCategory, quest:GetCategory() or "")
+        Refill(readPriority, quest:GetPriority() or "")
+        Refill(readStatus, quest:GetStatus() or "")
+        Refill(readGiver, quest:GetQuestGiver() or "")
+        Refill(readLocation, quest:GetLocation() or "")
+        Refill(readDescription, quest:GetDescription() or "")
+        Refill(readRewards, quest:GetRewards() or "")
+        Refill(readClaimed, cond(quest:GetRewardsClaimed(), "Yes", "No"))
     end
 
     --What the list column leaves; "100%" here would be the whole working
@@ -741,7 +870,7 @@ function QMEditorPanel.Create(qm)
             local quest = Live()
 
             contentPanel:SetClass("collapsed", quest == nil)
-            emptyLabel:SetClass("collapsed", quest ~= nil)
+            emptyNotice:SetClass("collapsed", quest ~= nil)
 
             if quest == nil then
                 return
@@ -758,28 +887,21 @@ function QMEditorPanel.Create(qm)
                 FillReadForm(quest)
             end
 
+            --The inactive list is handed nothing, so its rows collapse rather
+            --than sit bound to a quest the viewer has moved on from.
             local objectives = quest:GetObjectivesForUser()
-            local objectiveRows = {}
-            for _, objective in ipairs(objectives) do
-                if canEdit then
-                    objectiveRows[#objectiveRows + 1] = EditObjectiveRow(objective)
-                else
-                    objectiveRows[#objectiveRows + 1] = ReadObjectiveRow(objective)
-                end
-            end
-            if #objectiveRows == 0 then
-                objectiveRows[1] = EmptyLine("None yet.")
-            end
-            objectivesBody.children = objectiveRows
+            local none = {}
+            editObjectives:SetClass("collapsed", not canEdit)
+            readObjectives:SetClass("collapsed", canEdit)
+            THCWidgets.BindList(editObjectives, cond(canEdit, objectives, none),
+                CreateEditObjectiveRow, "setObjective")
+            THCWidgets.BindList(readObjectives, cond(canEdit, none, objectives),
+                CreateReadObjectiveRow, "setObjective")
+            noObjectives:SetClass("collapsed", #objectives > 0)
 
-            local noteRows = {}
-            for _, note in ipairs(quest:GetNotes()) do
-                noteRows[#noteRows + 1] = NoteRow(note)
-            end
-            if #noteRows == 0 then
-                noteRows[1] = EmptyLine("No notes yet.")
-            end
-            notesBody.children = noteRows
+            local notes = quest:GetNotes()
+            THCWidgets.BindList(notesBody, notes, CreateNoteRow, "setNote")
+            noNotes:SetClass("collapsed", #notes > 0)
         end,
 
         create = function(element)
@@ -787,7 +909,7 @@ function QMEditorPanel.Create(qm)
         end,
 
         contentPanel,
-        emptyLabel,
+        emptyNotice,
     }
 
     return resultPanel

@@ -185,32 +185,74 @@ function QMUIUtils.FormColumns(columns)
     }
 end
 
+--- Dresses a glyph panel for a bound row: icon, tint class and tooltip, each
+--- touched only when it moved. The state table is the panel's own memory.
+--- @param panel table The glyph panel
+--- @param state table Holds icon, tone and tooltip between binds
+--- @param icon string
+--- @param tone string A bg* tint class
+--- @param tooltip string
+function QMUIUtils.BindGlyph(panel, state, icon, tone, tooltip)
+    if state.icon ~= icon then
+        state.icon = icon
+        panel.bgimage = icon
+    end
+    if state.tone ~= tone then
+        if state.tone ~= nil then
+            panel:SetClass(state.tone, false)
+        end
+        state.tone = tone
+        panel:SetClass(tone, true)
+    end
+    if state.tooltip ~= tooltip then
+        state.tooltip = tooltip
+        panel.tooltip = THCWidgets.Tooltip(tooltip)
+    end
+end
+
 --- A two-state glyph: lit when on, muted when off. Live when a change handler
---- is given, a plain indicator otherwise.
+--- is given, a plain indicator otherwise. `setState` re-dresses it for a
+--- bound row without rebuilding.
 --- @param args table on boolean; iconOn string; iconOff string; tooltipOn string; tooltipOff string; change nil|fun(on: boolean); size nil|number; halign nil|string; hmargin nil|number
 --- @return table panel The glyph panel
 function QMUIUtils.GlyphToggle(args)
-    local on = args.on == true
+    local m_on = args.on == true
     local size = args.size or 16
 
     local press = nil
     if args.change ~= nil then
         press = function()
-            args.change(not on)
+            args.change(not m_on)
         end
     end
 
-    return gui.Panel{
-        classes = { cond(on, "bgFg", "bgFgMuted") },
+    local panel = gui.Panel{
+        classes = { cond(m_on, "bgFg", "bgFgMuted") },
         width = size,
         height = size,
         halign = args.halign or "left",
         valign = "center",
         hmargin = args.hmargin or 4,
-        bgimage = cond(on, args.iconOn, args.iconOff),
-        hover = THCWidgets.Tooltip(cond(on, args.tooltipOn, args.tooltipOff)),
+        bgimage = cond(m_on, args.iconOn, args.iconOff),
         press = press,
+
+        --- @param on boolean
+        setState = function(element, on)
+            on = on == true
+            if on == m_on then
+                return
+            end
+            m_on = on
+            element:SetClass("bgFg", on)
+            element:SetClass("bgFgMuted", not on)
+            element.bgimage = cond(on, args.iconOn, args.iconOff)
+            element.tooltip = THCWidgets.Tooltip(cond(on, args.tooltipOn, args.tooltipOff))
+        end,
     }
+
+    panel.tooltip = THCWidgets.Tooltip(cond(m_on, args.tooltipOn, args.tooltipOff))
+
+    return panel
 end
 
 --- The player-visibility eye
