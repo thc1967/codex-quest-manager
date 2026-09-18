@@ -35,6 +35,12 @@ QMConstants.sectionWidth = "100%-16"
 QMConstants.iconEyeShown = "phosphor/eye.png"
 QMConstants.iconEyeHidden = "phosphor/eye-slash.png"
 QMConstants.iconGear = "phosphor/gear-six-fill.png"
+QMConstants.iconLocked = "phosphor/lock-simple-light.png"
+QMConstants.iconUnlocked = "phosphor/lock-simple-open.png"
+
+--- Widths inside a form column, for controls that should not fill it
+QMConstants.choiceWidth = "50%"
+QMConstants.shortInputWidth = "78%"
 
 QMConstants.statusIcon = {
     [QMQuest.STATUS.NOT_STARTED] = "phosphor/circle-light.png",

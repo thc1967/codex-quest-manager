@@ -109,19 +109,37 @@ local function CreateRow(qm, quest, index, selectedId, onSelect)
         },
     }
 
-    --The Director sees every row's eye. A player sees one only on quests they
-    --own: every other quest they can see is visible by definition.
+    --- Writes one field of the live quest
+    --- @param fn fun(live: QMQuest)
+    local function UpdateQuest(fn)
+        local live = qm:GetQuest(questId)
+        if live == nil then
+            return
+        end
+        qm:ExecuteUpdateFn(function()
+            fn(live)
+        end)
+    end
+
+    --Editors get the eye and the lock. A player who cannot edit sees neither:
+    --every quest they can see is visible by definition, and locked to them.
     if canEdit then
         children[#children + 1] = QMUIUtils.EyeToggle{
             shown = quest:GetVisibleToPlayers(),
             size = QMConstants.rowIconSize,
             change = function(shown)
-                local live = qm:GetQuest(questId)
-                if live == nil then
-                    return
-                end
-                qm:ExecuteUpdateFn(function()
+                UpdateQuest(function(live)
                     live:SetVisibleToPlayers(shown)
+                end)
+            end,
+        }
+
+        children[#children + 1] = QMUIUtils.LockToggle{
+            unlocked = quest:GetPlayersMayEdit(),
+            size = QMConstants.rowIconSize,
+            change = function(unlocked)
+                UpdateQuest(function(live)
+                    live:SetPlayersMayEdit(unlocked)
                 end)
             end,
         }

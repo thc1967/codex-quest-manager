@@ -185,37 +185,68 @@ function QMUIUtils.FormColumns(columns)
     }
 end
 
---- The player-visibility eye. Live when a change handler is given, a plain indicator otherwise.
---- @param args table shown boolean; change nil|fun(shown: boolean); size nil|number; halign nil|string; hmargin nil|number
---- @return table panel The eye panel
-function QMUIUtils.EyeToggle(args)
-    local shown = args.shown == true
+--- A two-state glyph: lit when on, muted when off. Live when a change handler
+--- is given, a plain indicator otherwise.
+--- @param args table on boolean; iconOn string; iconOff string; tooltipOn string; tooltipOff string; change nil|fun(on: boolean); size nil|number; halign nil|string; hmargin nil|number
+--- @return table panel The glyph panel
+function QMUIUtils.GlyphToggle(args)
+    local on = args.on == true
     local size = args.size or 16
-
-    local tooltip
-    if args.change ~= nil then
-        tooltip = cond(shown, "Players can see this. Click to hide it.", "Hidden from players. Click to show it.")
-    else
-        tooltip = cond(shown, "Visible to players", "Hidden from players")
-    end
 
     local press = nil
     if args.change ~= nil then
         press = function()
-            args.change(not shown)
+            args.change(not on)
         end
     end
 
     return gui.Panel{
-        classes = { cond(shown, "bgFg", "bgFgMuted") },
+        classes = { cond(on, "bgFg", "bgFgMuted") },
         width = size,
         height = size,
         halign = args.halign or "left",
         valign = "center",
         hmargin = args.hmargin or 4,
-        bgimage = cond(shown, QMConstants.iconEyeShown, QMConstants.iconEyeHidden),
-        hover = gui.Tooltip(tooltip),
+        bgimage = cond(on, args.iconOn, args.iconOff),
+        hover = gui.Tooltip(cond(on, args.tooltipOn, args.tooltipOff)),
         press = press,
+    }
+end
+
+--- The player-visibility eye
+--- @param args table shown boolean; change nil|fun(shown: boolean); size nil|number; halign nil|string; hmargin nil|number
+--- @return table panel The eye panel
+function QMUIUtils.EyeToggle(args)
+    local live = args.change ~= nil
+    return QMUIUtils.GlyphToggle{
+        on = args.shown,
+        iconOn = QMConstants.iconEyeShown,
+        iconOff = QMConstants.iconEyeHidden,
+        tooltipOn = cond(live, "Players can see this. Click to hide it.", "Visible to players"),
+        tooltipOff = cond(live, "Hidden from players. Click to show it.", "Hidden from players"),
+        change = args.change,
+        size = args.size,
+        halign = args.halign,
+        hmargin = args.hmargin,
+    }
+end
+
+--- The player-editing lock. Lit when open: anyone who can see the quest may edit it.
+--- @param args table unlocked boolean; change nil|fun(unlocked: boolean); size nil|number; halign nil|string; hmargin nil|number
+--- @return table panel The lock panel
+function QMUIUtils.LockToggle(args)
+    local live = args.change ~= nil
+    return QMUIUtils.GlyphToggle{
+        on = args.unlocked,
+        iconOn = QMConstants.iconUnlocked,
+        iconOff = QMConstants.iconLocked,
+        tooltipOn = cond(live, "Players can edit this quest. Click to lock it.", "Players can edit this quest"),
+        tooltipOff = cond(live, "Only the Director and its creator can edit this. Click to let players edit.",
+            "Only the Director and its creator can edit this"),
+        change = args.change,
+        size = args.size,
+        halign = args.halign,
+        hmargin = args.hmargin,
     }
 end
 

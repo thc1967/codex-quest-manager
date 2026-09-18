@@ -143,7 +143,7 @@ function QMEditorPanel.Create(qm)
 
     local categoryDropdown = gui.Dropdown{
         classes = {"formStacked", "sizeS"},
-        width = "100%",
+        width = QMConstants.choiceWidth,
         height = 26,
         options = DropdownOptions(QMConstants.categoryOrder),
         change = ChoiceChange(QMQuest.GetCategory, QMQuest.SetCategory),
@@ -151,7 +151,7 @@ function QMEditorPanel.Create(qm)
 
     local priorityDropdown = gui.Dropdown{
         classes = {"formStacked", "sizeS"},
-        width = "100%",
+        width = QMConstants.choiceWidth,
         height = 26,
         options = DropdownOptions(QMConstants.priorityOrder),
         change = ChoiceChange(QMQuest.GetPriority, QMQuest.SetPriority),
@@ -159,7 +159,7 @@ function QMEditorPanel.Create(qm)
 
     local statusDropdown = gui.Dropdown{
         classes = {"formStacked", "sizeS"},
-        width = "100%",
+        width = QMConstants.choiceWidth,
         height = 26,
         options = DropdownOptions(QMConstants.statusOrder),
         change = ChoiceChange(QMQuest.GetStatus, QMQuest.SetStatus),
@@ -167,12 +167,14 @@ function QMEditorPanel.Create(qm)
 
     local questGiverInput = gui.Input{
         classes = {"formStacked", "sizeS"},
+        width = QMConstants.shortInputWidth,
         placeholderText = "Who gave this quest?",
         change = TextChange(QMQuest.GetQuestGiver, QMQuest.SetQuestGiver),
     }
 
     local locationInput = gui.Input{
         classes = {"formStacked", "sizeS"},
+        width = QMConstants.shortInputWidth,
         placeholderText = "Where does this quest take place?",
         change = TextChange(QMQuest.GetLocation, QMQuest.SetLocation),
     }
@@ -437,6 +439,7 @@ function QMEditorPanel.Create(qm)
                 width = string.format("100%%-%d", OBJECTIVE_INDENT),
                 height = QMConstants.multilineHeight,
                 halign = "right",
+                tmargin = 4,
                 multiline = true,
                 textAlignment = "topLeft",
                 characterLimit = QMConstants.characterLimit,

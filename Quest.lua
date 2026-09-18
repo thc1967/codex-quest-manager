@@ -13,6 +13,7 @@
 --- @field rewards string The rewards for completing this quest
 --- @field rewardsClaimed boolean Whether the rewards for this quest have been claimed
 --- @field visibleToPlayers boolean Whether this quest is visible to non-Directors
+--- @field playersMayEdit boolean Whether anyone who can see this quest may edit it
 --- @field objectives table The list of objectives (QMObjective) for this quest
 --- @field notes table The list of notes (QMNote) for this quest
 --- @field createdBy string GUID identifier of the user who created this objective
@@ -54,6 +55,7 @@ QMQuest.questGiver = ""
 QMQuest.location = ""
 QMQuest.rewards = ""
 QMQuest.rewardsClaimed = false
+QMQuest.playersMayEdit = false
 
 --- Creates a new quest instance
 --- @return QMQuest instance The new quest instance
@@ -246,10 +248,25 @@ function QMQuest:_setModifiedTimestamp()
     return self
 end
 
---- Whether the current user may change this quest: the Director, or whoever created it
+--- Gets whether players may edit this quest
+--- @return boolean playersMayEdit True if anyone who can see this quest may edit it
+function QMQuest:GetPlayersMayEdit()
+    return self.playersMayEdit
+end
+
+--- Sets whether players may edit this quest
+--- @param playersMayEdit boolean True to let anyone who can see this quest edit it
+--- @return QMQuest self For chaining
+function QMQuest:SetPlayersMayEdit(playersMayEdit)
+    self.playersMayEdit = playersMayEdit or false
+    return self
+end
+
+--- Whether the current user may change this quest: the Director, whoever
+--- created it, or anyone at all once it is unlocked
 --- @return boolean canEdit True if the current user may edit this quest
 function QMQuest:CanUserEdit()
-    return dmhub.isDM or self.createdBy == dmhub.userid
+    return dmhub.isDM or self.createdBy == dmhub.userid or self.playersMayEdit == true
 end
 
 --- Gets the objectives the current user may see, sorted by order. Editors see all of them.
