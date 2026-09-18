@@ -120,6 +120,18 @@ function QMDialog.Create()
         flow = "horizontal",
         valign = "top",
 
+        --Quest rows are table data, so the subtitle follows them through this
+        --watcher; the shell itself monitors the notes document.
+        gui.Panel{
+            classes = {"collapsed"},
+            monitorAssets = true,
+            refreshAssets = function()
+                if dlg ~= nil then
+                    dlg:SetSubtitle(Subtitle(qm, m_selected))
+                end
+            end,
+        },
+
         --No vscroll here: the library's bordered list is the scroller
         gui.Panel{
             width = QMConstants.listWidth,

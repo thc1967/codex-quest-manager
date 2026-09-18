@@ -18,11 +18,11 @@ function RichQuest:CreateDisplay()
     local m_questId
     local m_quest
 
+    --Fetched fresh every time: quest rows are table data and a held copy goes stale
     local function validateQuest(questId)
-        if m_quest and m_quest:GetID() == questId then return m_quest end
         m_quest = nil
         if m_questManager == nil then m_questManager = QMQuestManager.CreateNew() end
-        if m_questManager then
+        if m_questManager and questId ~= nil then
             if QMUIUtils.IsGuid(questId) then
                 m_quest = m_questManager:GetQuest(questId)
             else
@@ -99,8 +99,8 @@ function RichQuest:CreateDisplay()
         end,
         press = function(element)
             if m_questManager and m_quest then
-                m_questManager:ExecuteUpdateFn(function()
-                    m_quest:SetVisibleToPlayers(not m_quest:GetVisibleToPlayers())
+                m_questManager:UpdateQuest(m_quest:GetID(), function(quest)
+                    quest:SetVisibleToPlayers(not quest:GetVisibleToPlayers())
                 end)
                 resultPanel:FireEventTree("refreshTag")
             end
@@ -194,6 +194,10 @@ function RichQuest:CreateDisplay()
 
         monitorGame = m_questManager:GetDocumentPath(),
         refreshGame = function(element)
+            element:FireEventTree("refreshTag")
+        end,
+        monitorAssets = true,
+        refreshAssets = function(element)
             element:FireEventTree("refreshTag")
         end,
 

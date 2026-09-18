@@ -117,16 +117,13 @@ function QMEditorPanel.Create(qm)
         return qm:GetQuest(m_questId)
     end
 
-    --- Runs a write against the live quest inside a document change
+    --- Runs a write against the selected quest's live row
     --- @param fn fun(quest: QMQuest)
     local function Update(fn)
-        local quest = Live()
-        if quest == nil then
+        if m_questId == nil then
             return
         end
-        qm:ExecuteUpdateFn(function()
-            fn(quest)
-        end)
+        qm:UpdateQuest(m_questId, fn)
     end
 
     --- Text field write that skips the change when nothing changed
@@ -671,12 +668,10 @@ function QMEditorPanel.Create(qm)
             tmargin = 4,
             click = function()
                 local content = trim(noteInput.text or "")
-                if content == "" then
+                if content == "" or m_questId == nil then
                     return
                 end
-                Update(function(live)
-                    live:AddNote(content)
-                end)
+                qm:AddNote(m_questId, content)
                 noteInput.text = ""
             end,
         },
@@ -705,12 +700,10 @@ function QMEditorPanel.Create(qm)
             hover = THCWidgets.Tooltip("Remove this note"),
             click = function()
                 local noteId = bound.noteId
-                if noteId == nil then
+                if noteId == nil or m_questId == nil then
                     return
                 end
-                Update(function(live)
-                    live:RemoveNote(noteId)
-                end)
+                qm:RemoveNote(m_questId, noteId)
             end,
         }
 
@@ -866,7 +859,13 @@ function QMEditorPanel.Create(qm)
             element:FireEvent("rebuild")
         end,
 
+        --The shell relays the notes document; quest rows are table data
         questsChanged = function(element)
+            element:FireEvent("rebuild")
+        end,
+
+        monitorAssets = true,
+        refreshAssets = function(element)
             element:FireEvent("rebuild")
         end,
 
@@ -909,7 +908,7 @@ function QMEditorPanel.Create(qm)
                 CreateReadObjectiveRow, "setObjective")
             noObjectives:SetClass("collapsed", #objectives > 0)
 
-            local notes = quest:GetNotes()
+            local notes = qm:GetNotes(m_questId)
             THCWidgets.BindList(notesBody, notes, CreateNoteRow, "setNote")
             noNotes:SetClass("collapsed", #notes > 0)
         end,

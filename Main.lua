@@ -27,12 +27,10 @@ if dmhub.isDM then
                 else
                     quest = questManager:GetQuestByTitle(questId)
                 end
-                if quest then
-                    if quest:GetVisibleToPlayers() ~= visible then
-                        questManager:ExecuteUpdateFn(function()
-                            quest:SetVisibleToPlayers(visible)
-                        end)
-                    end
+                if quest and quest:GetVisibleToPlayers() ~= visible then
+                    questManager:UpdateQuest(quest:GetID(), function(live)
+                        live:SetVisibleToPlayers(visible)
+                    end)
                 end
             end
         end

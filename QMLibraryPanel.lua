@@ -78,19 +78,13 @@ local function CreateRow(qm, onSelect)
     local statusState = {}
     local priorityState = {}
 
-    --- Writes one field of the live quest
+    --- Writes one field of the bound quest's live row
     --- @param fn fun(live: QMQuest)
     local function UpdateQuest(fn)
         if bound.questId == nil then
             return
         end
-        local live = qm:GetQuest(bound.questId)
-        if live == nil then
-            return
-        end
-        qm:ExecuteUpdateFn(function()
-            fn(live)
-        end)
+        qm:UpdateQuest(bound.questId, fn)
     end
 
     local statusGlyph = Glyph()
@@ -406,10 +400,10 @@ function QMLibraryPanel.Create(qm, onSelect)
         flow = "vertical",
         valign = "top",
 
-        --Watches the document itself, so it stands alone in a dock as well as
-        --beside the editor in the window.
-        monitorGame = qm:GetDocumentPath(),
-        refreshGame = function(element)
+        --Quest rows are table data. Watching them here lets the list stand
+        --alone in a dock as well as beside the editor in the window.
+        monitorAssets = true,
+        refreshAssets = function(element)
             element:FireEvent("rebuild")
         end,
 

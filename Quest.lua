@@ -1,9 +1,10 @@
---- Main quest object containing all quest data, objectives, and notes
---- Represents a complete quest with status tracking, categorization, and progress management
+--- Main quest object containing all quest data and objectives. A row of the
+--- Quests data table; its notes live in the quest log document, keyed by id.
 --- @class QMQuest
---- @field _manager QMQuestManager The quest manager for document operations
 --- @field id string GUID identifier for this quest
 --- @field title string The title of this quest
+--- @field name string The title again, under the key THCLibrary sorts and slugs by
+--- @field slug string A title-derived key, unique across the table
 --- @field description string The description of this quest
 --- @field category string The category of this quest
 --- @field status string The status of this quest
@@ -15,7 +16,6 @@
 --- @field visibleToPlayers boolean Whether this quest is visible to non-Directors
 --- @field playersMayEdit boolean Whether anyone who can see this quest may edit it
 --- @field objectives table The list of objectives (QMObjective) for this quest
---- @field notes table The list of notes (QMNote) for this quest
 --- @field createdBy string GUID identifier of the user who created this objective
 --- @field createdAt string|osdate The ISO 8601 UTC timestamp
 --- @field modifiedAt string|osdate The ISO 8601 UTC timestamp
@@ -47,6 +47,8 @@ QMQuest.PRIORITY = {
 }
 
 QMQuest.title = ""
+QMQuest.name = ""
+QMQuest.slug = ""
 QMQuest.description = ""
 QMQuest.category = QMQuest.CATEGORY.MAIN
 QMQuest.status = QMQuest.STATUS.NOT_STARTED
@@ -64,7 +66,6 @@ function QMQuest.CreateNew()
         id = dmhub.GenerateGuid(),
         visibleToPlayers = (not dmhub.isDM),
         objectives = {},
-        notes = {},
         createdBy = dmhub.userid,
         createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -87,6 +88,7 @@ end
 --- @return QMQuest self For chaining
 function QMQuest:SetTitle(title)
     self.title = title or ""
+    self.name = self.title
     return self
 end
 
@@ -338,39 +340,6 @@ end
 function QMQuest:RemoveObjective(objectiveId)
     if self.objectives[objectiveId] then
         self.objectives[objectiveId] = nil
-    end
-    return self
-end
-
---- Gets all notes for this quest sorted by timestamp (newest first)
---- @return table notes Array of QMQuestNote instances
-function QMQuest:GetNotes()
-    local notesArray = {}
-    for _, note in pairs(self.notes) do
-        notesArray [#notesArray+1] = note
-    end
-
-    table.sort(notesArray, function(a, b)
-        return a:GetCreatedAt() > b:GetCreatedAt()
-    end)
-    return notesArray
-end
-
---- Adds a new note to this quest
---- @param content string The note content
---- @return QMQuestNote note The newly created note
-function QMQuest:AddNote(content)
-    local note = QMQuestNote.CreateNew(content)
-    self.notes[note.id] = note
-    return note
-end
-
---- Removes a note from this quest
---- @param noteId string The GUID of the note to remove
---- @return QMQuest self For chaining
-function QMQuest:RemoveNote(noteId)
-    if self.notes[noteId] then
-        self.notes[noteId] = nil
     end
     return self
 end
