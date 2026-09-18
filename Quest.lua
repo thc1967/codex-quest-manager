@@ -246,6 +246,29 @@ function QMQuest:_setModifiedTimestamp()
     return self
 end
 
+--- Whether the current user may change this quest: the Director, or whoever created it
+--- @return boolean canEdit True if the current user may edit this quest
+function QMQuest:CanUserEdit()
+    return dmhub.isDM or self.createdBy == dmhub.userid
+end
+
+--- Gets the objectives the current user may see, sorted by order. Editors see all of them.
+--- @return table objectives Array of QMQuestObjective instances
+function QMQuest:GetObjectivesForUser()
+    local sorted = self:GetObjectivesSorted()
+    if self:CanUserEdit() then
+        return sorted
+    end
+
+    local visible = {}
+    for _, objective in ipairs(sorted) do
+        if objective:GetVisibleToPlayers() then
+            visible[#visible + 1] = objective
+        end
+    end
+    return visible
+end
+
 --- Returns the objective matching the key or nil if not found
 --- @param objectiveId string The GUID identifier of the objective to return
 --- @return QMQuestObjective|nil The objective referenced by the key or nil if it doesn't exist

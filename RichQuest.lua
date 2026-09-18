@@ -79,10 +79,7 @@ function RichQuest:CreateDisplay()
         swallowPress = true,
         press = function(element)
             if m_quest then
-                local questMgrWindow = QMQuestManagerWindow.CreateNew(m_quest)
-                if questMgrWindow then
-                    questMgrWindow:Show()
-                end
+                QMDialog.Open(m_quest:GetID())
             end
         end,
     }
@@ -152,7 +149,7 @@ function RichQuest:CreateDisplay()
 
     local objectives = makeBodyLabel(function(element)
         local text = ""
-        local list = m_quest and m_quest:GetObjectivesSorted()
+        local list = m_quest and m_quest:GetObjectivesForUser()
         if list and #list > 0 then
             text = string.format("<b>Objective%s:</b>%s", #list > 1 and "s" or "", #list > 1 and "\n" or "")
             for i, objective in ipairs(list) do

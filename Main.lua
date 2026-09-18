@@ -1,9 +1,3 @@
-local questManager = QMQuestManager.CreateNew()
-local questPanel = QMQuestTrackerPanel.CreateNew(questManager)
-if questPanel then
-    questPanel:Register()
-end
-
 if dmhub.isDM then
 
     --- Set the visibility status of a quest

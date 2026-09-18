@@ -147,6 +147,91 @@ function QMUIUtils.CreateLabeledInput(labelText, inputOptions, panelOptions)
     }
 end
 
+--- A label-over-control form row
+--- @param labelText string The label above the control
+--- @param width string The row's width
+--- @param control table The control panel
+--- @return table panel The row panel
+function QMUIUtils.FormRow(labelText, width, control)
+    return gui.Panel{
+        classes = {"formStackedRow"},
+        width = width,
+        children = {
+            gui.Label{
+                classes = {"formStacked", "sizeS"},
+                text = labelText,
+            },
+            control,
+        },
+    }
+end
+
+--- The player-visibility eye. Live when a change handler is given, a plain indicator otherwise.
+--- @param args table shown boolean; change nil|fun(shown: boolean); size nil|number; halign nil|string; hmargin nil|number
+--- @return table panel The eye panel
+function QMUIUtils.EyeToggle(args)
+    local shown = args.shown == true
+    local size = args.size or 16
+
+    local tooltip
+    if args.change ~= nil then
+        tooltip = cond(shown, "Players can see this. Click to hide it.", "Hidden from players. Click to show it.")
+    else
+        tooltip = cond(shown, "Visible to players", "Hidden from players")
+    end
+
+    local press = nil
+    if args.change ~= nil then
+        press = function()
+            args.change(not shown)
+        end
+    end
+
+    return gui.Panel{
+        classes = { cond(shown, "bgFg", "bgFgMuted") },
+        width = size,
+        height = size,
+        halign = args.halign or "left",
+        valign = "center",
+        hmargin = args.hmargin or 4,
+        bgimage = cond(shown, QMConstants.iconEyeShown, QMConstants.iconEyeHidden),
+        hover = gui.Tooltip(tooltip),
+        press = press,
+    }
+end
+
+--- A section header with a hairline under it, drawn as a real bottom border
+--- @param args table text string; trailing nil|table A panel placed after the label
+--- @return table panel The header panel
+function QMUIUtils.SectionHeader(args)
+    local children = {
+        gui.Label{
+            classes = {"tableLabel", "sizeXs"},
+            width = "auto",
+            height = "auto",
+            halign = "left",
+            valign = "center",
+            text = args.text or "",
+        },
+    }
+
+    if args.trailing ~= nil then
+        children[#children + 1] = args.trailing
+    end
+
+    return gui.Panel{
+        classes = {"border"},
+        width = QMConstants.sectionWidth,
+        height = 26,
+        flow = "horizontal",
+        halign = "left",
+        valign = "top",
+        tmargin = 10,
+        border = { x1 = 0, y1 = 1, x2 = 0, y2 = 0 },
+        children = children,
+    }
+end
+
 --- Gets player display name with color formatting from user ID
 --- @param userId string The user ID to look up
 --- @return string coloredDisplayName The player's display name with HTML color tags, or "{unknown}" if not found

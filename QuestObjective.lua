@@ -6,6 +6,7 @@
 --- @field title string The title of this objective
 --- @field description string The description of this objective
 --- @field status string The status of this objective
+--- @field visibleToPlayers boolean Whether non-Directors can see this objective
 --- @field createdBy string GUID identifier of the user who created this objective
 --- @field createdAt string|osdate The ISO 8601 UTC timestamp
 QMQuestObjective = RegisterGameType("QMQuestObjective")
@@ -23,6 +24,9 @@ QMQuestObjective.title = ""
 QMQuestObjective.description = ""
 QMQuestObjective.status = QMQuestObjective.STATUS.NOT_STARTED
 
+--- Objectives saved before this field existed stay visible, as they always were
+QMQuestObjective.visibleToPlayers = true
+
 --- Creates a new quest objective instance
 --- @param sortOrder number The sort order for this note
 --- @return QMQuestObjective instance The new objective instance
@@ -30,6 +34,7 @@ function QMQuestObjective.CreateNew(sortOrder)
     return QMQuestObjective.new{
         id = dmhub.GenerateGuid(),
         order = sortOrder,
+        visibleToPlayers = (not dmhub.isDM),
         createdBy = dmhub.userid,
         createdAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -96,6 +101,20 @@ end
 --- @return QMQuestObjective self For chaining
 function QMQuestObjective:SetTitle(title)
     self.title = title or ""
+    return self
+end
+
+--- Gets whether this objective is visible to players
+--- @return boolean visible True if players can see this objective
+function QMQuestObjective:GetVisibleToPlayers()
+    return self.visibleToPlayers
+end
+
+--- Sets whether this objective is visible to players
+--- @param visible boolean True if players should see this objective
+--- @return QMQuestObjective self For chaining
+function QMQuestObjective:SetVisibleToPlayers(visible)
+    self.visibleToPlayers = visible or false
     return self
 end
 
