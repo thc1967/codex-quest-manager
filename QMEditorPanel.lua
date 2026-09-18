@@ -480,15 +480,19 @@ function QMEditorPanel.Create(qm)
             valign = "top",
             vmargin = 4,
 
-            --- @param objective QMQuestObjective|nil
-            setObjective = function(element, objective)
-                element:SetClass("collapsed", objective == nil)
-                if objective == nil then
+            --- @param item nil|{objective: QMQuestObjective, owner: boolean}
+            setObjective = function(element, item)
+                element:SetClass("collapsed", item == nil)
+                if item == nil then
                     return
                 end
 
+                local objective = item.objective
                 bound.objectiveId = objective:GetID()
                 handle.data.objectiveId = bound.objectiveId
+
+                --Only an owner decides what players see
+                eye:SetClass("collapsed", not item.owner)
 
                 local status = objective:GetStatus() or QMQuestObjective.STATUS.NOT_STARTED
                 bound.status = status
@@ -891,10 +895,16 @@ function QMEditorPanel.Create(qm)
             --than sit bound to a quest the viewer has moved on from.
             local objectives = quest:GetObjectivesForUser()
             local none = {}
+            local owner = quest:IsUserOwner()
+            local editItems = {}
+            if canEdit then
+                for i, objective in ipairs(objectives) do
+                    editItems[i] = { objective = objective, owner = owner }
+                end
+            end
             editObjectives:SetClass("collapsed", not canEdit)
             readObjectives:SetClass("collapsed", canEdit)
-            THCWidgets.BindList(editObjectives, cond(canEdit, objectives, none),
-                CreateEditObjectiveRow, "setObjective")
+            THCWidgets.BindList(editObjectives, editItems, CreateEditObjectiveRow, "setObjective")
             THCWidgets.BindList(readObjectives, cond(canEdit, none, objectives),
                 CreateReadObjectiveRow, "setObjective")
             noObjectives:SetClass("collapsed", #objectives > 0)

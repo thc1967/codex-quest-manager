@@ -266,14 +266,21 @@ end
 --- created it, or anyone at all once it is unlocked
 --- @return boolean canEdit True if the current user may edit this quest
 function QMQuest:CanUserEdit()
-    return dmhub.isDM or self.createdBy == dmhub.userid or self.playersMayEdit == true
+    return self:IsUserOwner() or self.playersMayEdit == true
 end
 
---- Gets the objectives the current user may see, sorted by order. Editors see all of them.
+--- Whether the current user owns this quest: the Director, or whoever created it.
+--- Owners see and control hidden objectives; an unlocked quest's other editors do not.
+--- @return boolean owner True if the current user owns this quest
+function QMQuest:IsUserOwner()
+    return dmhub.isDM or self.createdBy == dmhub.userid
+end
+
+--- Gets the objectives the current user may see, sorted by order. Owners see all of them.
 --- @return table objectives Array of QMQuestObjective instances
 function QMQuest:GetObjectivesForUser()
     local sorted = self:GetObjectivesSorted()
-    if self:CanUserEdit() then
+    if self:IsUserOwner() then
         return sorted
     end
 
