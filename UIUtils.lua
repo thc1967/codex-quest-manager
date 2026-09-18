@@ -151,11 +151,13 @@ end
 --- @param labelText string The label above the control
 --- @param width string The row's width
 --- @param control table The control panel
+--- @param lmargin number|nil Overrides the theme's row margin; 0 for a column inside a group
 --- @return table panel The row panel
-function QMUIUtils.FormRow(labelText, width, control)
+function QMUIUtils.FormRow(labelText, width, control, lmargin)
     return gui.Panel{
         classes = {"formStackedRow"},
         width = width,
+        lmargin = lmargin,
         children = {
             gui.Label{
                 classes = {"formStacked", "sizeS"},
@@ -163,6 +165,23 @@ function QMUIUtils.FormRow(labelText, width, control)
             },
             control,
         },
+    }
+end
+
+--- A row of form columns. The group carries the one row margin and the row
+--- width, so its columns split that box and its right edge lines up with a
+--- single row's; columns built for it pass lmargin 0.
+--- @param columns table Array of column panels
+--- @return table panel The group panel
+function QMUIUtils.FormColumns(columns)
+    return gui.Panel{
+        width = QMConstants.formRowWidth,
+        height = "auto",
+        flow = "horizontal",
+        halign = "left",
+        valign = "top",
+        lmargin = QMConstants.formRowMargin,
+        children = columns,
     }
 end
 

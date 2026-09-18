@@ -17,6 +17,9 @@ QMConstants.rowIconSize = 16
 QMConstants.folderHeaderHeight = 26
 
 -- Editor
+--- A form row's width, and the margin the theme's formStackedRow puts on its left
+QMConstants.formRowWidth = "97%"
+QMConstants.formRowMargin = 12
 QMConstants.multilineHeight = 60
 QMConstants.descriptionHeight = 100
 QMConstants.characterLimit = 4096

@@ -50,11 +50,13 @@ end
 --- @param labelText string
 --- @param width string
 --- @param value string
+--- @param lmargin number|nil Overrides the theme's row margin; 0 for a column inside a group
 --- @return table panel
-local function ReadField(labelText, width, value)
+local function ReadField(labelText, width, value, lmargin)
     return gui.Panel{
         classes = {"formStackedRow"},
         width = width,
+        lmargin = lmargin,
         children = {
             gui.Label{
                 classes = {"formStacked", "sizeS"},
@@ -216,34 +218,22 @@ function QMEditorPanel.Create(qm)
         halign = "left",
         valign = "top",
 
-        QMUIUtils.FormRow("Title", "97%", titleInput),
+        QMUIUtils.FormRow("Title", QMConstants.formRowWidth, titleInput),
 
-        gui.Panel{
-            width = "100%",
-            height = "auto",
-            flow = "horizontal",
-            halign = "left",
-            valign = "top",
-
-            QMUIUtils.FormRow("Category", "31%", categoryDropdown),
-            QMUIUtils.FormRow("Priority", "31%", priorityDropdown),
-            QMUIUtils.FormRow("Status", "34%", statusDropdown),
+        QMUIUtils.FormColumns{
+            QMUIUtils.FormRow("Category", "33%", categoryDropdown, 0),
+            QMUIUtils.FormRow("Priority", "33%", priorityDropdown, 0),
+            QMUIUtils.FormRow("Status", "34%", statusDropdown, 0),
         },
 
-        gui.Panel{
-            width = "100%",
-            height = "auto",
-            flow = "horizontal",
-            halign = "left",
-            valign = "top",
-
-            QMUIUtils.FormRow("Quest Giver", "48%", questGiverInput),
-            QMUIUtils.FormRow("Location", "48%", locationInput),
+        QMUIUtils.FormColumns{
+            QMUIUtils.FormRow("Quest Giver", "50%", questGiverInput, 0),
+            QMUIUtils.FormRow("Location", "50%", locationInput, 0),
         },
 
-        QMUIUtils.FormRow("Rewards", "97%", rewardsInput),
+        QMUIUtils.FormRow("Rewards", QMConstants.formRowWidth, rewardsInput),
         rewardsClaimedCheck,
-        QMUIUtils.FormRow("Description", "97%", descriptionInput),
+        QMUIUtils.FormRow("Description", QMConstants.formRowWidth, descriptionInput),
     }
 
     --- The text-only form for a viewer who may not edit; rebuilt per quest
@@ -698,34 +688,22 @@ function QMEditorPanel.Create(qm)
     --- @param quest QMQuest
     local function FillReadForm(quest)
         readPanel.children = {
-            ReadField("Title", "97%", quest:GetTitle()),
+            ReadField("Title", QMConstants.formRowWidth, quest:GetTitle()),
 
-            gui.Panel{
-                width = "100%",
-                height = "auto",
-                flow = "horizontal",
-                halign = "left",
-                valign = "top",
-
-                ReadField("Category", "31%", quest:GetCategory()),
-                ReadField("Priority", "31%", quest:GetPriority()),
-                ReadField("Status", "34%", quest:GetStatus()),
+            QMUIUtils.FormColumns{
+                ReadField("Category", "33%", quest:GetCategory(), 0),
+                ReadField("Priority", "33%", quest:GetPriority(), 0),
+                ReadField("Status", "34%", quest:GetStatus(), 0),
             },
 
-            gui.Panel{
-                width = "100%",
-                height = "auto",
-                flow = "horizontal",
-                halign = "left",
-                valign = "top",
-
-                ReadField("Quest Giver", "48%", quest:GetQuestGiver()),
-                ReadField("Location", "48%", quest:GetLocation()),
+            QMUIUtils.FormColumns{
+                ReadField("Quest Giver", "50%", quest:GetQuestGiver(), 0),
+                ReadField("Location", "50%", quest:GetLocation(), 0),
             },
 
-            ReadField("Rewards", "97%", cond(quest:GetRewardsClaimed(),
+            ReadField("Rewards", QMConstants.formRowWidth, cond(quest:GetRewardsClaimed(),
                 (quest:GetRewards() or "") .. " (claimed)", quest:GetRewards())),
-            ReadField("Description", "97%", quest:GetDescription()),
+            ReadField("Description", QMConstants.formRowWidth, quest:GetDescription()),
         }
     end
 
