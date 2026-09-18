@@ -148,7 +148,7 @@ end
 LaunchablePanel.Register{
     name = QMConstants.panelName,
     menu = "tools",
-    icon = mod.images.questManager,
+    icon = QMConstants.icon,
     halign = "center",
     valign = "center",
     content = QMDialog.Create,

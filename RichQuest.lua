@@ -39,7 +39,7 @@ function RichQuest:CreateDisplay()
     end
 
     local qmIcon = gui.Panel{
-        bgimage = mod.images.questManager,
+        bgimage = QMConstants.icon,
         bgcolor = "white",
         halign = "left",
         valign = "center",

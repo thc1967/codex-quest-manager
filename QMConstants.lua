@@ -32,6 +32,7 @@ QMConstants.noteHeaderHeight = 20
 QMConstants.sectionWidth = "100%-16"
 
 -- Icons
+QMConstants.icon = "phosphor/scroll-light.png"
 QMConstants.iconEyeShown = "phosphor/eye.png"
 QMConstants.iconEyeHidden = "phosphor/eye-slash.png"
 QMConstants.iconGear = "phosphor/gear-six-fill.png"
@@ -89,6 +90,13 @@ QMConstants.statusSortRank = {
     [QMQuest.STATUS.ON_HOLD] = 3,
     [QMQuest.STATUS.COMPLETED] = 4,
     [QMQuest.STATUS.FAILED] = 5,
+}
+
+--- Display order within a status; urgent work sorts first
+QMConstants.prioritySortRank = {
+    [QMQuest.PRIORITY.HIGH] = 1,
+    [QMQuest.PRIORITY.MEDIUM] = 2,
+    [QMQuest.PRIORITY.LOW] = 3,
 }
 
 --- Dropdown and glyph order for statuses

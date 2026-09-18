@@ -341,15 +341,22 @@ local function CreateFolderBlock(qm, category, onSelect, onRebuild)
     }
 end
 
---- Live work first, then alphabetical
+--- Live work first, urgent before routine within it, then alphabetical
 --- @param quests table Array of QMQuest
 local function SortQuests(quests)
     table.sort(quests, function(a, b)
-        local rankA = QMConstants.statusSortRank[a:GetStatus()] or 99
-        local rankB = QMConstants.statusSortRank[b:GetStatus()] or 99
-        if rankA ~= rankB then
-            return rankA < rankB
+        local statusA = QMConstants.statusSortRank[a:GetStatus()] or 99
+        local statusB = QMConstants.statusSortRank[b:GetStatus()] or 99
+        if statusA ~= statusB then
+            return statusA < statusB
         end
+
+        local priorityA = QMConstants.prioritySortRank[a:GetPriority()] or 99
+        local priorityB = QMConstants.prioritySortRank[b:GetPriority()] or 99
+        if priorityA ~= priorityB then
+            return priorityA < priorityB
+        end
+
         return string.lower(a:GetTitle() or "") < string.lower(b:GetTitle() or "")
     end)
 end
