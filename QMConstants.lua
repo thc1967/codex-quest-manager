@@ -86,8 +86,8 @@ QMConstants.resolvedStatuses = {
 --- Display order for quests within a folder; lower sorts first
 QMConstants.statusSortRank = {
     [QMQuest.STATUS.ACTIVE] = 1,
-    [QMQuest.STATUS.NOT_STARTED] = 2,
-    [QMQuest.STATUS.ON_HOLD] = 3,
+    [QMQuest.STATUS.ON_HOLD] = 2,
+    [QMQuest.STATUS.NOT_STARTED] = 3,
     [QMQuest.STATUS.COMPLETED] = 4,
     [QMQuest.STATUS.FAILED] = 5,
 }
