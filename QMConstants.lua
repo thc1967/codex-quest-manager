@@ -39,6 +39,7 @@ QMConstants.sectionWidth = "100%-16"
 
 -- Icons
 QMConstants.icon = "phosphor/scroll-light.png"
+QMConstants.tableIconKind = "thcquest"  -- keys a quest's icon on a user's tabletop
 QMConstants.iconEyeShown = "phosphor/eye.png"
 QMConstants.iconEyeHidden = "phosphor/eye-slash.png"
 QMConstants.iconGear = "phosphor/gear-six-fill.png"

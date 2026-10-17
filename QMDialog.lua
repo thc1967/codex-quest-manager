@@ -157,6 +157,52 @@ function QMDialog.Create()
     return dlg:Root()
 end
 
+--- A quest this user may see, or nil: a quest the Director hides from players
+--- leaves their tables.
+--- @param questId string
+--- @return QMQuest|nil
+local function TableQuest(questId)
+    return QMQuestManager.CreateNew():GetQuest(questId)
+end
+
+--- The hover's details line for a quest's table icon, as the window's subtitle
+--- reads it.
+--- @param questId string
+--- @return string[]
+local function TableIconDetails(questId)
+    local lines = {}
+    local quest = TableQuest(questId)
+    if quest ~= nil then
+        lines[#lines + 1] = quest:GetCategory() or ""
+        lines[#lines + 1] = quest:GetStatus() or ""
+        lines[#lines + 1] = (quest:GetPriority() or "") .. " priority"
+    end
+    lines[#lines + 1] = "Click to open"
+    return lines
+end
+
+--Players too: each tracks the quests they want on their own table.
+THCWidgets.RegisterTableIcon{
+    kind = QMConstants.tableIconKind,
+    icon = QMConstants.icon,
+    available = function()
+        return true
+    end,
+    exists = function(questId)
+        return TableQuest(questId) ~= nil
+    end,
+    name = function(questId)
+        local quest = TableQuest(questId)
+        local title = quest ~= nil and trim(quest:GetTitle() or "") or ""
+        if title == "" then
+            return "(New Quest)"
+        end
+        return title
+    end,
+    details = TableIconDetails,
+    open = QMDialog.Open,
+}
+
 LaunchablePanel.Register{
     name = QMConstants.panelName,
     menu = "tools",

@@ -143,6 +143,16 @@ local function CreateRow(qm, onSelect)
                 },
             }
 
+            if THCWidgets.TableIconsAvailable() then
+                entries[#entries + 1] = {
+                    text = "Put on the Table",
+                    click = function()
+                        element.popup = nil
+                        THCWidgets.PutOnTable(QMConstants.tableIconKind, questId)
+                    end,
+                }
+            end
+
             if bound.canEdit then
                 entries[#entries + 1] = {
                     text = "Delete",
@@ -167,12 +177,20 @@ local function CreateRow(qm, onSelect)
         halign = "left",
         valign = "top",
 
-        --A drag by someone who may not edit finds no target, so it drops nowhere
+        --A drag by someone who may not edit finds no target, so it files nowhere
         draggable = true,
         canDragOnto = function(element, target)
             return bound.canEdit == true and target ~= nil and target:HasClass(DROP_CLASS)
+                and THCWidgets.RowOverWindow()
+        end,
+        --Dragged out over the bare table, the quest's icon follows the mouse.
+        dragging = function(element, target)
+            THCWidgets.TableIconDragging(element, QMConstants.tableIconKind, bound.questId)
         end,
         drag = function(element, target)
+            if THCWidgets.TableIconDropped(element, QMConstants.tableIconKind, bound.questId) then
+                return
+            end
             if target == nil or target.data.category == bound.category then
                 return
             end
